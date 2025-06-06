@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}编辑 {{ device.name }} 命令 - {{ recipe.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>为菜谱 "{{ recipe.title }}" 编辑设备 "{{ device.name }}" 的命令</h2>
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="command_content" class="form-label">命令内容 (JSON 格式):</label>
+            <textarea class="form-control" id="command_content" name="command_content" rows="10" required>{% if form.command_content.value %}{{ form.command_content.value }}{% else %}{{ recipe_device.command_content }}{% endif %}</textarea>
+            {% if form.command_content.errors %}
+                {% for error in form.command_content.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            {% endif %}
+        </div>
+        <button type="submit" class="btn btn-primary">保存更改</button>
+        <a href="{% url 'web:recipe_detail' recipe.id %}" class="btn btn-secondary">取消</a>
+    </form>
+</div>
+{% endblock %} 

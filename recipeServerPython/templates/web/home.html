@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}首页 - 菜谱服务器{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1 class="mb-4">欢迎使用菜谱服务器</h1>
+        <p class="lead">这里是一个专注于智能厨电设备的菜谱分享平台，我们为各种智能厨电提供兼容的菜谱。</p>
+    </div>
+    {% if user.is_authenticated %}
+    <div class="col-md-4 text-end">
+        <a href="{% url 'web:submit_recipe' %}" class="btn btn-success btn-lg">
+            <i class="bi bi-plus-circle"></i> 创建菜谱
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- 快速访问卡片 -->
+<div class="row mb-5">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-book fs-1 text-primary mb-3"></i>
+                <h3 class="card-title">所有菜谱</h3>
+                <p class="card-text">浏览我们收集的所有菜谱，找到适合您的烹饪灵感。</p>
+                <a href="{% url 'web:recipe_list' %}" class="btn btn-primary">查看菜谱</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-cpu fs-1 text-success mb-3"></i>
+                <h3 class="card-title">所有设备</h3>
+                <p class="card-text">查看所有支持的智能厨电设备，了解它们的特性和功能。</p>
+                <a href="{% url 'web:device_list' %}" class="btn btn-success">查看设备</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h2 class="mb-4">最新菜谱</h2>
+
+{% if recipes %}
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        {% for recipe in recipes %}
+            <div class="col">
+                <div class="card recipe-card h-100">
+                    {% if recipe.image %}
+                        <img src="{{ recipe.image.url }}" class="card-img-top" alt="{{ recipe.title }}">
+                    {% else %}
+                        <div class="bg-light text-center p-5">
+                            <i class="bi bi-camera" style="font-size: 3rem;"></i>
+                        </div>
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ recipe.title }}</h5>
+                        <p class="card-text">{{ recipe.description|truncatechars:100 }}</p>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <a href="{% url 'web:recipe_detail' recipe.id %}" class="btn btn-primary">查看详情</a>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        <p>目前还没有菜谱，请稍后再来查看！</p>
+    </div>
+{% endif %}
+{% endblock %} 

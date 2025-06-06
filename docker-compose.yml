@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: blog_db
+      POSTGRES_USER: blog_user
+      POSTGRES_PASSWORD: blog_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+  # Redis 缓存服务
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  # Django 后端
+  backend:
+    build: 
+      context: ./recipeServerPython
+      dockerfile: Dockerfile
+    environment:
+      - DEBUG=False
+      - DATABASE_URL=postgresql://blog_user:blog_password@db:5432/blog_db
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=your-secret-key-here
+      - ALLOWED_HOSTS=localhost,127.0.0.1,your-domain.com
+    volumes:
+      - ./recipeServerPython:/app
+      - media_files:/app/media
+      - static_files:/app/static
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn --bind 0.0.0.0:8000 config.wsgi:application"
+
+  # React 前端
+  frontend:
+    build:
+      context: ./recipeServerWeb
+      dockerfile: Dockerfile
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000/api/v1
+      - VITE_SITE_TITLE=我的个人博客
+      - VITE_SITE_DESCRIPTION=分享技术心得与生活感悟
+    volumes:
+      - ./recipeServerWeb:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # Nginx 反向代理和静态文件服务
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - static_files:/var/www/static
+      - media_files:/var/www/media
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  media_files:
+  static_files:
+
+networks:
+  default:
+    name: blog_network 

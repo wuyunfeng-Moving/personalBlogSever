@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}个人资料 - 菜谱服务器{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="mb-4">个人资料</h1>
+        <p class="lead">欢迎, {{ user.username }}!</p>
+    </div>
+</div>
+
+<div class="mb-5">
+    <h2 class="mb-4">我的菜谱</h2>
+    
+    {% if recipes %}
+        <div class="row row-cols-1 row-cols-md-3 g-4">
+            {% for recipe in recipes %}
+                <div class="col">
+                    <div class="card recipe-card h-100">
+                        {% if recipe.image %}
+                            <img src="{{ recipe.image.url }}" class="card-img-top" alt="{{ recipe.title }}">
+                        {% else %}
+                            <div class="bg-light text-center p-5">
+                                <i class="bi bi-camera" style="font-size: 3rem;"></i>
+                            </div>
+                        {% endif %}
+                        <div class="card-body">
+                            <h5 class="card-title">{{ recipe.title }}</h5>
+                            <p class="card-text">{{ recipe.description|truncatechars:100 }}</p>
+                        </div>
+                        <div class="card-footer bg-transparent d-flex justify-content-between">
+                            <a href="{% url 'web:recipe_detail' recipe.id %}" class="btn btn-primary">查看详情</a>
+                            <a href="#" class="btn btn-outline-secondary">编辑</a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <p>您还没有创建任何菜谱。</p>
+        </div>
+    {% endif %}
+    
+    <div class="mt-4">
+        <a href="{% url 'web:submit_recipe' %}" class="btn btn-success">创建新菜谱</a>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h3 class="mb-0 h5">账号信息</h3>
+    </div>
+    <div class="card-body">
+        <p><strong>用户名:</strong> {{ user.username }}</p>
+        <p><strong>电子邮箱:</strong> {{ user.email }}</p>
+        <p><strong>加入时间:</strong> {{ user.date_joined|date:"Y年m月d日" }}</p>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}提交设备型号 - 菜谱服务器{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h4 mb-0">提交设备型号</h2>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-4">请填写设备型号详细信息，提交后管理员将进行审核。</p>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.model_identifier.id_for_label }}" class="form-label">{{ form.model_identifier.label }}</label>
+                            {{ form.model_identifier }}
+                            {% if form.model_identifier.errors %}
+                                {% for error in form.model_identifier.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                            <small class="form-text text-muted">设备型号的唯一标识符，如"SmartCooker-X1"</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">{{ form.name.label }}</label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                {% for error in form.name.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                            <small class="form-text text-muted">设备型号的显示名称，如"智能电饭煲 X1"</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.command_template.id_for_label }}" class="form-label">{{ form.command_template.label }}</label>
+                            {{ form.command_template }}
+                            {% if form.command_template.errors %}
+                                {% for error in form.command_template.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                请按照JSON格式填写命令模板。例如：<br>
+                                {"type": "cooker", "max_temperature": 180, "modes": ["煮饭", "炖汤", "蒸煮"]}
+                            </small>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                {% for error in form.description.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{% url 'web:home' %}" class="btn btn-secondary">取消</a>
+                            <button type="submit" class="btn btn-primary">提交设备型号</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

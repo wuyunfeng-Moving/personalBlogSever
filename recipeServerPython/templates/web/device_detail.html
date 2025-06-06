@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}{{ device.name }} - 菜谱服务器{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-body">
+            <h2 class="card-title">{{ device.name }}</h2>
+            <p class="text-muted">型号: {{ device.model.name }} ({{ device.model.model_identifier }})</p>
+            
+            <div class="mb-4">
+                <h5>设备描述</h5>
+                <p>{{ device.model.description|default:"暂无描述" }}</p>
+            </div>
+
+            <div class="mb-4">
+                <h5>支持的菜谱</h5>
+                {% if recipe_devices %}
+                    <div class="list-group">
+                        {% for recipe_device in recipe_devices %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h5 class="mb-1">
+                                            <a href="{% url 'web:recipe_detail' recipe_device.recipe.id %}" class="text-decoration-none">
+                                                {{ recipe_device.recipe.title }}
+                                            </a>
+                                        </h5>
+                                        <p class="mb-1 text-muted">作者：{{ recipe_device.recipe.author.username }}</p>
+                                    </div>
+                                    {% if user.is_authenticated and recipe_device.recipe.author == user %}
+                                        <a href="{% url 'web:edit_device_command_guide' recipe_device.recipe.id device.id %}" class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-edit"></i> 编辑命令
+                                        </a>
+                                    {% endif %}
+                                </div>
+                                <div class="mt-2">
+                                    <h6 class="mb-2">设备命令：</h6>
+                                    <pre class="bg-light p-2 rounded"><code>{{ recipe_device.command_content|default:"未定义" }}</code></pre>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>暂无支持此设备的菜谱
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

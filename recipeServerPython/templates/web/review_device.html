@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}审核设备型号 - {{ device.name }} - 菜谱服务器{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="mb-4">
+        <a href="{% url 'web:review_submissions' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> 返回审核列表
+        </a>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h1 class="h3 mb-0">审核设备型号: {{ device.name }}</h1>
+        </div>
+        <div class="card-body">
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h2 class="h4 mb-3">基本信息</h2>
+                    <dl class="row">
+                        <dt class="col-sm-4">名称</dt>
+                        <dd class="col-sm-8">{{ device.name }}</dd>
+
+                        <dt class="col-sm-4">型号标识符</dt>
+                        <dd class="col-sm-8">{{ device.model_identifier }}</dd>
+
+                        <dt class="col-sm-4">提交者</dt>
+                        <dd class="col-sm-8">{{ device.submitter.username }}</dd>
+
+                        <dt class="col-sm-4">提交时间</dt>
+                        <dd class="col-sm-8">{{ device.created_at|date:"Y-m-d H:i:s" }}</dd>
+
+                        <dt class="col-sm-4">制造商</dt>
+                        <dd class="col-sm-8">{{ device.manufacturer }}</dd>
+                    </dl>
+                </div>
+                <div class="col-md-6">
+                    {% if device.image %}
+                    <img src="{{ device.image.url }}" alt="{{ device.name }}" class="img-fluid rounded">
+                    {% else %}
+                    <div class="bg-light p-4 text-center rounded" style="height: 200px;">
+                        <span class="text-muted">无图片</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2 class="h4 mb-3">设备描述</h2>
+                    <div class="p-3 bg-light rounded">
+                        <p>{{ device.description|linebreaks }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2 class="h4 mb-3">技术规格</h2>
+                    <div class="p-3 bg-light rounded">
+                        <p>{{ device.specifications|linebreaks }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <form method="post" class="mt-4">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="status" class="form-label">审核结果</label>
+                    <select name="status" id="status" class="form-select">
+                        <option value="pending" {% if device.status == 'pending' %}selected{% endif %}>待审核</option>
+                        <option value="approved" {% if device.status == 'approved' %}selected{% endif %}>批准</option>
+                        <option value="rejected" {% if device.status == 'rejected' %}selected{% endif %}>拒绝</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="review_comment" class="form-label">审核评论</label>
+                    <textarea name="review_comment" id="review_comment" class="form-control" rows="3">{{ device.review_comment }}</textarea>
+                    <div class="form-text">请提供批准或拒绝的原因，拒绝时此内容会发送给用户</div>
+                </div>
+                <div class="d-flex justify-content-end">
+                    <a href="{% url 'web:review_submissions' %}" class="btn btn-outline-secondary me-2">取消</a>
+                    <button type="submit" class="btn btn-primary">保存审核结果</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

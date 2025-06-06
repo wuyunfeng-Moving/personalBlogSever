@@ -1,0 +1,55 @@
+{% extends 'web/base.html' %}
+
+{% block title %}为菜谱添加设备 - 智能厨房{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4>为"{{ recipe.title }}"添加设备</h4>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="form-group mb-3">
+                            <label for="{{ form.device.id_for_label }}">选择设备:</label>
+                            {{ form.device }}
+                            {% if form.device.errors %}
+                                <div class="text-danger">
+                                    {{ form.device.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="{{ form.command_content.id_for_label }}">命令内容 (JSON格式):</label>
+                            {{ form.command_content }}
+                            <small class="form-text text-muted">请输入JSON格式的命令内容</small>
+                            {% if form.command_content.errors %}
+                                <div class="text-danger">
+                                    {{ form.command_content.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'web:recipe_detail' recipe_id=recipe.id %}" class="btn btn-secondary">返回</a>
+                            <button type="submit" class="btn btn-primary">添加设备</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

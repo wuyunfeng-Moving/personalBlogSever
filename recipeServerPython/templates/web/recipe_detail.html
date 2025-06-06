@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}{{ recipe.title }} - 菜谱服务器{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'web:home' %}" class="btn btn-outline-secondary">&larr; 返回首页</a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <h1 class="mb-3">{{ recipe.title }}</h1>
+        
+        <div class="mb-4">
+            {% if recipe.author %}
+                <span class="text-muted">作者: {{ recipe.author.username }}</span> | 
+            {% endif %}
+            <span class="text-muted">发布时间: {{ recipe.created_at|date:"Y-m-d H:i" }}</span>
+            {% if recipe.updated_at != recipe.created_at %}
+                | <span class="text-muted">更新时间: {{ recipe.updated_at|date:"Y-m-d H:i" }}</span>
+            {% endif %}
+        </div>
+        
+        {% if recipe.image %}
+            <div class="mb-4">
+                <img src="{{ recipe.image.url }}" class="img-fluid rounded" alt="{{ recipe.title }}">
+            </div>
+        {% endif %}
+        
+        <div class="mb-4">
+            <h5>描述</h5>
+            <p>{{ recipe.description }}</p>
+        </div>
+        
+        <div class="row mb-4">
+            {% if recipe.prep_time_minutes %}
+                <div class="col-md-4">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title">准备时间</h5>
+                            <p class="card-text">{{ recipe.prep_time_minutes }} 分钟</p>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+            
+            {% if recipe.cook_time_minutes %}
+                <div class="col-md-4">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title">烹饪时间</h5>
+                            <p class="card-text">{{ recipe.cook_time_minutes }} 分钟</p>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+            
+            {% if recipe.servings %}
+                <div class="col-md-4">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title">份量</h5>
+                            <p class="card-text">{{ recipe.servings }} 人份</p>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="row">
+            <div class="col-md-5 mb-4">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">配料</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if recipe.ingredients %}
+                            <ul class="list-group list-group-flush">
+                                {% for ingredient in recipe.ingredients %}
+                                    <li class="list-group-item">
+                                        {% if ingredient.quantity and ingredient.unit %}
+                                            {{ ingredient.name }} ({{ ingredient.quantity }} {{ ingredient.unit }})
+                                        {% else %}
+                                            {{ ingredient.name }}
+                                        {% endif %}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="card-text">没有提供配料信息</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-7 mb-4">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">烹饪步骤</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-text">
+                            {{ recipe.instructions|linebreaks|default:"暂无步骤说明" }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mb-4">
+            <h5>兼容设备</h5>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <p>这个菜谱可以在以下设备上烹饪：</p>
+            </div>
+            {% if recipe_devices %}
+                <div class="list-group">
+                    {% for recipe_device in recipe_devices %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h5 class="mb-1">{{ recipe_device.device.name }}</h5>
+                                    <p class="mb-1 text-muted">型号: {{ recipe_device.device.model.name }} ({{ recipe_device.device.model.model_identifier }})</p> 
+                                </div>
+                                {% if user.is_authenticated and recipe.author == user %}
+                                    <a href="{% url 'web:edit_device_command_guide' recipe.id recipe_device.device.id %}" class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-pencil"></i> 编辑命令
+                                    </a>
+                                {% endif %}
+                            </div>
+                            <div class="mt-2">
+                                <h6 class="mb-2">设备命令：</h6>
+                                <pre class="bg-light p-2 rounded"><code>{{ recipe_device.command_content|default:"未定义" }}</code></pre>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    <p class="mb-0">暂无兼容设备信息或命令</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

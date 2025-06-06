@@ -1,0 +1,44 @@
+# 个人博客系统 - 简洁版 .gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.env
+*.log
+db.sqlite3
+
+# Django
+recipeServerPython/media/uploads/
+recipeServerPython/static/
+local_settings.py
+
+# Node.js
+node_modules/
+recipeServerWeb/dist/
+recipeServerWeb/.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs & Cache
+logs/
+*.log
+.cache/
+
+# Docker
+docker-compose.override.yml
+
+# SSL Certificates
+*.pem
+*.key
+*.crt
+
+# Backup files
+backup/
+*.bak 

@@ -1,0 +1,724 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}创建菜谱 - 菜谱服务器{% endblock %}
+
+{% block extra_css %}
+<style>
+    .preview-container {
+        display: none;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .preview-steps .step {
+        margin-bottom: 15px;
+        padding: 15px;
+        background-color: #fff;
+        border-radius: 5px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .preview-steps .step-number {
+        display: inline-block;
+        width: 30px;
+        height: 30px;
+        line-height: 30px;
+        text-align: center;
+        background-color: #0d6efd;
+        color: white;
+        border-radius: 50%;
+        margin-right: 10px;
+    }
+    .ingredient-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+        padding: 8px;
+        background-color: #fff;
+        border-radius: 4px;
+    }
+    .form-card {
+        margin-bottom: 20px;
+        border-left: 4px solid #0d6efd;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">创建菜谱</h1>
+            <div class="d-flex justify-content-end mb-3">
+                <button id="previewBtn" class="btn btn-outline-primary">
+                    <i class="bi bi-eye"></i> 预览菜谱
+                </button>
+            </div>
+            
+            <!-- 预览区域 -->
+            <div id="previewContainer" class="preview-container mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 id="previewTitle">菜谱标题</h2>
+                    <button id="closePreviewBtn" class="btn btn-sm btn-outline-secondary">关闭预览</button>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-8">
+                        <div id="previewDescription" class="mb-3">菜谱描述</div>
+                        <div class="mb-3">
+                            <span class="badge bg-secondary me-2" id="previewDifficulty">难度</span>
+                            <span class="badge bg-info me-2" id="previewSuitablePerson">适合人群</span>
+                            <span class="badge bg-success me-2" id="previewTags">标签</span>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-4">
+                                <div class="card text-center">
+                                    <div class="card-body">
+                                        <h6>准备时间</h6>
+                                        <p id="previewPrepTime">0分钟</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="card text-center">
+                                    <div class="card-body">
+                                        <h6>烹饪时间</h6>
+                                        <p id="previewCookTime">0分钟</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="card text-center">
+                                    <div class="card-body">
+                                        <h6>份量</h6>
+                                        <p id="previewServings">4人份</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div id="previewImage" class="bg-light text-center p-5">
+                                <i class="bi bi-camera" style="font-size: 3rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5>主料</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="previewStapleFood" class="list-group">
+                                    <!-- 主料列表将在这里生成 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-success text-white">
+                                <h5>辅料</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="previewIngredients" class="list-group">
+                                    <!-- 辅料列表将在这里生成 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5>步骤</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="previewSteps" class="preview-steps">
+                            <!-- 步骤将在这里生成 -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5>烹饪小贴士</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="previewTips">
+                            <!-- 小贴士将在这里生成 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 表单区域 -->
+            <form method="post" enctype="multipart/form-data" id="recipeForm">
+                {% csrf_token %}
+                
+                <!-- 基本信息 -->
+                <div class="card form-card">
+                    <div class="card-header">
+                        <h5>基本信息</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.title.id_for_label }}" class="form-label">{{ form.title.label }}</label>
+                                {{ form.title }}
+                                {% if form.title.errors %}
+                                    {% for error in form.title.errors %}
+                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.image.id_for_label }}" class="form-label">{{ form.image.label }}</label>
+                                {{ form.image }}
+                                {% if form.image.errors %}
+                                    {% for error in form.image.errors %}
+                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                {% for error in form.description.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.difficulty.id_for_label }}" class="form-label">{{ form.difficulty.label }}</label>
+                                {{ form.difficulty }}
+                                {% if form.difficulty.errors %}
+                                    {% for error in form.difficulty.errors %}
+                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.suitable_person.id_for_label }}" class="form-label">{{ form.suitable_person.label }}</label>
+                                {{ form.suitable_person }}
+                                {% if form.suitable_person.errors %}
+                                    {% for error in form.suitable_person.errors %}
+                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.tags.id_for_label }}" class="form-label">{{ form.tags.label }}</label>
+                                {{ form.tags }}
+                                <small class="form-text text-muted">{{ form.tags.help_text }}</small>
+                                {% if form.tags.errors %}
+                                    {% for error in form.tags.errors %}
+                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.work_modes.id_for_label }}" class="form-label">{{ form.work_modes.label }}</label>
+                                {{ form.work_modes }}
+                                <small class="form-text text-muted">{{ form.work_modes.help_text }}</small>
+                                {% if form.work_modes.errors %}
+                                    {% for error in form.work_modes.errors %}
+                                        <div class="invalid-feedback d-block">{{ error }}</div>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 烹饪时间与温度 -->
+                <div class="card form-card">
+                    <div class="card-header">
+                        <h5>烹饪时间与温度</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">准备时间</label>
+                                <div class="input-group">
+                                    {{ form.prep_time_hours }}
+                                    <span class="input-group-text">小时</span>
+                                    {{ form.prep_time_minutes }}
+                                    <span class="input-group-text">分钟</span>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">烹饪时间</label>
+                                <div class="input-group">
+                                    {{ form.cook_time_hours }}
+                                    <span class="input-group-text">小时</span>
+                                    {{ form.cook_time_minutes }}
+                                    <span class="input-group-text">分钟</span>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">温度设置</label>
+                                <div class="input-group">
+                                    {{ form.temperature_value }}
+                                    {{ form.temperature_unit }}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-3 mb-3">
+                                <label for="{{ form.servings.id_for_label }}" class="form-label">{{ form.servings.label }}</label>
+                                {{ form.servings }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 设备设置 -->
+                <div class="card form-card">
+                    <div class="card-header">
+                        <h5>设备设置</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.comal_position.id_for_label }}" class="form-label">{{ form.comal_position.label }}</label>
+                                {{ form.comal_position }}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.compatible_models.id_for_label }}" class="form-label">{{ form.compatible_models.label }}</label>
+                                {{ form.compatible_models }}
+                                <small class="form-text text-muted">按住Ctrl键可多选</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 食材 -->
+                <div class="card form-card">
+                    <div class="card-header">
+                        <h5>食材清单</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="{{ form.staple_food.id_for_label }}" class="form-label">{{ form.staple_food.label }}</label>
+                            {{ form.staple_food }}
+                            <small class="form-text text-muted">请按照JSON格式填写主料信息。例如：[{"name": "猪瘦肉", "value": 400, "unit": "g"}]</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.ingredients.id_for_label }}" class="form-label">{{ form.ingredients.label }}</label>
+                            {{ form.ingredients }}
+                            <small class="form-text text-muted">请按照JSON格式填写辅料信息。例如：[{"name": "姜", "value": 3, "unit": "片"}]</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 步骤 -->
+                <div class="card form-card">
+                    <div class="card-header">
+                        <h5>烹饪步骤</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- 隐藏的步骤JSON数据字段 -->
+                        <input type="hidden" id="{{ form.steps.id_for_label }}" name="{{ form.steps.html_name }}" value="{{ form.steps.value|default:'[]' }}">
+                        
+                        <!-- 动态步骤编辑界面 -->
+                        <div id="steps-container">
+                            <!-- 步骤将在这里动态生成 -->
+                        </div>
+                        
+                        <div class="text-center mt-3">
+                            <button type="button" id="add-step-btn" class="btn btn-success">
+                                <i class="bi bi-plus-circle"></i> 添加步骤
+                            </button>
+                        </div>
+                        
+                        <!-- 步骤模板 (用于JavaScript克隆) -->
+                        <template id="step-template">
+                            <div class="step-item card mb-3">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h6 class="step-number mb-0">步骤 <span>1</span></h6>
+                                    <div>
+                                        <button type="button" class="btn btn-sm btn-outline-primary move-up-btn">
+                                            <i class="bi bi-arrow-up"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary move-down-btn">
+                                            <i class="bi bi-arrow-down"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger remove-step-btn">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label class="form-label">步骤图片</label>
+                                                <div class="step-image-container mb-2">
+                                                    <img src="" class="img-preview img-fluid rounded mb-2 d-none" alt="步骤图片预览">
+                                                </div>
+                                                <div class="input-group">
+                                                    <input type="text" class="form-control step-image-url" placeholder="图片URL">
+                                                    <button class="btn btn-outline-secondary browse-btn" type="button">浏览</button>
+                                                </div>
+                                                <input type="file" class="d-none step-image-file" accept="image/*">
+                                                <small class="form-text text-muted">支持URL或本地图片上传</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-8">
+                                            <div class="mb-3">
+                                                <label class="form-label">步骤描述</label>
+                                                <textarea class="form-control step-description" rows="4" placeholder="请详细描述这个步骤的操作..."></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                
+                <!-- 小贴士 -->
+                <div class="card form-card">
+                    <div class="card-header">
+                        <h5>烹饪小贴士</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="{{ form.tips.id_for_label }}" class="form-label">{{ form.tips.label }}</label>
+                            {{ form.tips }}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 提交按钮 -->
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                    <a href="{% url 'web:home' %}" class="btn btn-secondary me-2">取消</a>
+                    <button type="submit" class="btn btn-primary">保存菜谱</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const previewBtn = document.getElementById('previewBtn');
+        const closePreviewBtn = document.getElementById('closePreviewBtn');
+        const previewContainer = document.getElementById('previewContainer');
+        const form = document.getElementById('recipeForm');
+        
+        // 步骤编辑功能
+        const stepsContainer = document.getElementById('steps-container');
+        const addStepBtn = document.getElementById('add-step-btn');
+        const stepTemplate = document.getElementById('step-template');
+        const stepsInput = document.getElementById('{{ form.steps.id_for_label }}');
+        
+        // 初始化步骤
+        initSteps();
+        
+        // 添加步骤按钮事件
+        addStepBtn.addEventListener('click', function() {
+            addStep();
+        });
+        
+        // 初始化步骤编辑区域
+        function initSteps() {
+            try {
+                const stepsData = JSON.parse(stepsInput.value || '[]');
+                
+                if (stepsData.length === 0) {
+                    // 如果没有步骤数据，默认添加一个空步骤
+                    addStep();
+                } else {
+                    // 加载现有步骤
+                    stepsData.forEach(step => {
+                        addStep(step.stepDescription, step.imageUrl);
+                    });
+                }
+            } catch (e) {
+                console.error('加载步骤数据失败:', e);
+                addStep(); // 添加一个默认步骤
+            }
+        }
+        
+        // 添加步骤
+        function addStep(description = '', imageUrl = '') {
+            const stepItem = document.importNode(stepTemplate.content, true).querySelector('.step-item');
+            
+            // 设置步骤编号
+            updateStepNumbers();
+            
+            // 设置步骤内容
+            if (description) {
+                stepItem.querySelector('.step-description').value = description;
+            }
+            
+            if (imageUrl) {
+                stepItem.querySelector('.step-image-url').value = imageUrl;
+                const imgPreview = stepItem.querySelector('.img-preview');
+                imgPreview.src = imageUrl;
+                imgPreview.classList.remove('d-none');
+            }
+            
+            // 添加事件监听器
+            stepItem.querySelector('.remove-step-btn').addEventListener('click', function() {
+                stepItem.remove();
+                updateStepNumbers();
+                updateStepsJson();
+            });
+            
+            stepItem.querySelector('.move-up-btn').addEventListener('click', function() {
+                const prev = stepItem.previousElementSibling;
+                if (prev) {
+                    stepsContainer.insertBefore(stepItem, prev);
+                    updateStepNumbers();
+                    updateStepsJson();
+                }
+            });
+            
+            stepItem.querySelector('.move-down-btn').addEventListener('click', function() {
+                const next = stepItem.nextElementSibling;
+                if (next) {
+                    stepsContainer.insertBefore(next, stepItem);
+                    updateStepNumbers();
+                    updateStepsJson();
+                }
+            });
+            
+            // 图片URL输入事件
+            stepItem.querySelector('.step-image-url').addEventListener('input', function(e) {
+                const imgUrl = e.target.value.trim();
+                const imgPreview = stepItem.querySelector('.img-preview');
+                
+                if (imgUrl) {
+                    imgPreview.src = imgUrl;
+                    imgPreview.classList.remove('d-none');
+                } else {
+                    imgPreview.classList.add('d-none');
+                }
+                
+                updateStepsJson();
+            });
+            
+            // 步骤描述输入事件
+            stepItem.querySelector('.step-description').addEventListener('input', function() {
+                updateStepsJson();
+            });
+            
+            // 浏览按钮点击事件
+            stepItem.querySelector('.browse-btn').addEventListener('click', function() {
+                stepItem.querySelector('.step-image-file').click();
+            });
+            
+            // 文件选择事件
+            stepItem.querySelector('.step-image-file').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const imgUrl = e.target.result;
+                        stepItem.querySelector('.step-image-url').value = imgUrl;
+                        const imgPreview = stepItem.querySelector('.img-preview');
+                        imgPreview.src = imgUrl;
+                        imgPreview.classList.remove('d-none');
+                        updateStepsJson();
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+            
+            // 添加到容器
+            stepsContainer.appendChild(stepItem);
+            updateStepNumbers();
+            updateStepsJson();
+        }
+        
+        // 更新步骤编号
+        function updateStepNumbers() {
+            const stepItems = stepsContainer.querySelectorAll('.step-item');
+            stepItems.forEach((item, index) => {
+                item.querySelector('.step-number span').textContent = index + 1;
+            });
+        }
+        
+        // 更新步骤JSON数据
+        function updateStepsJson() {
+            const stepItems = stepsContainer.querySelectorAll('.step-item');
+            const stepsData = [];
+            
+            stepItems.forEach((item, index) => {
+                const stepNo = index + 1;
+                const stepDescription = item.querySelector('.step-description').value.trim();
+                const imageUrl = item.querySelector('.step-image-url').value.trim();
+                
+                stepsData.push({
+                    stepNo: stepNo,
+                    stepDescription: stepDescription,
+                    imageUrl: imageUrl
+                });
+            });
+            
+            stepsInput.value = JSON.stringify(stepsData);
+        }
+        
+        // 表单提交前验证
+        form.addEventListener('submit', function(e) {
+            updateStepsJson(); // 确保步骤数据最新
+        });
+        
+        // 预览按钮点击事件
+        previewBtn.addEventListener('click', function() {
+            updatePreview();
+            previewContainer.style.display = 'block';
+            window.scrollTo(0, 0);
+        });
+        
+        // 关闭预览按钮点击事件
+        closePreviewBtn.addEventListener('click', function() {
+            previewContainer.style.display = 'none';
+        });
+        
+        // 更新预览内容
+        function updatePreview() {
+            // 基本信息
+            document.getElementById('previewTitle').textContent = document.getElementById('{{ form.title.id_for_label }}').value || '菜谱标题';
+            document.getElementById('previewDescription').textContent = document.getElementById('{{ form.description.id_for_label }}').value || '菜谱描述';
+            
+            // 难度和适合人群
+            const difficultySelect = document.getElementById('{{ form.difficulty.id_for_label }}');
+            const difficultyText = difficultySelect.options[difficultySelect.selectedIndex].text;
+            document.getElementById('previewDifficulty').textContent = '难度: ' + difficultyText;
+            
+            const suitablePersonSelect = document.getElementById('{{ form.suitable_person.id_for_label }}');
+            const suitablePersonText = suitablePersonSelect.options[suitablePersonSelect.selectedIndex].text;
+            document.getElementById('previewSuitablePerson').textContent = '适合: ' + suitablePersonText;
+            
+            // 标签
+            const tags = document.getElementById('{{ form.tags.id_for_label }}').value;
+            document.getElementById('previewTags').textContent = tags || '标签';
+            
+            // 准备时间和烹饪时间
+            const prepHours = parseInt(document.getElementById('{{ form.prep_time_hours.id_for_label }}').value) || 0;
+            const prepMinutes = parseInt(document.getElementById('{{ form.prep_time_minutes.id_for_label }}').value) || 0;
+            document.getElementById('previewPrepTime').textContent = formatTime(prepHours, prepMinutes);
+            
+            const cookHours = parseInt(document.getElementById('{{ form.cook_time_hours.id_for_label }}').value) || 0;
+            const cookMinutes = parseInt(document.getElementById('{{ form.cook_time_minutes.id_for_label }}').value) || 0;
+            document.getElementById('previewCookTime').textContent = formatTime(cookHours, cookMinutes);
+            
+            // 份量
+            const servings = document.getElementById('{{ form.servings.id_for_label }}').value;
+            document.getElementById('previewServings').textContent = servings ? servings + '人份' : '4人份';
+            
+            // 主料
+            try {
+                const stapleFoodJson = document.getElementById('{{ form.staple_food.id_for_label }}').value;
+                if (stapleFoodJson) {
+                    const stapleFood = JSON.parse(stapleFoodJson);
+                    let stapleFoodHtml = '';
+                    stapleFood.forEach(item => {
+                        stapleFoodHtml += `
+                            <div class="ingredient-item">
+                                <strong>${item.name}</strong>
+                                <span class="ms-auto">${item.value} ${item.unit}</span>
+                            </div>
+                        `;
+                    });
+                    document.getElementById('previewStapleFood').innerHTML = stapleFoodHtml;
+                } else {
+                    document.getElementById('previewStapleFood').innerHTML = '<p>暂无主料信息</p>';
+                }
+            } catch (e) {
+                document.getElementById('previewStapleFood').innerHTML = '<p class="text-danger">主料格式错误，请检查JSON格式</p>';
+            }
+            
+            // 辅料
+            try {
+                const ingredientsJson = document.getElementById('{{ form.ingredients.id_for_label }}').value;
+                if (ingredientsJson) {
+                    const ingredients = JSON.parse(ingredientsJson);
+                    let ingredientsHtml = '';
+                    ingredients.forEach(item => {
+                        ingredientsHtml += `
+                            <div class="ingredient-item">
+                                <strong>${item.name}</strong>
+                                <span class="ms-auto">${item.value} ${item.unit}</span>
+                            </div>
+                        `;
+                    });
+                    document.getElementById('previewIngredients').innerHTML = ingredientsHtml;
+                } else {
+                    document.getElementById('previewIngredients').innerHTML = '<p>暂无辅料信息</p>';
+                }
+            } catch (e) {
+                document.getElementById('previewIngredients').innerHTML = '<p class="text-danger">辅料格式错误，请检查JSON格式</p>';
+            }
+            
+            // 步骤 - 直接从步骤编辑界面获取
+            try {
+                // 通过隐藏字段获取最新的步骤数据
+                const stepsJson = document.getElementById('{{ form.steps.id_for_label }}').value;
+                if (stepsJson) {
+                    const steps = JSON.parse(stepsJson);
+                    let stepsHtml = '';
+                    steps.forEach(step => {
+                        stepsHtml += `
+                            <div class="step">
+                                <span class="step-number">${step.stepNo}</span>
+                                <span>${step.stepDescription}</span>
+                                ${step.imageUrl ? `<div class="mt-2"><img src="${step.imageUrl}" class="img-fluid rounded" alt="步骤图片"></div>` : ''}
+                            </div>
+                        `;
+                    });
+                    document.getElementById('previewSteps').innerHTML = stepsHtml;
+                } else {
+                    document.getElementById('previewSteps').innerHTML = '<p>暂无步骤信息</p>';
+                }
+            } catch (e) {
+                document.getElementById('previewSteps').innerHTML = '<p class="text-danger">步骤格式错误</p>';
+                console.error(e);
+            }
+            
+            // 小贴士
+            const tips = document.getElementById('{{ form.tips.id_for_label }}').value;
+            document.getElementById('previewTips').innerHTML = tips ? formatTips(tips) : '<p>暂无小贴士</p>';
+        }
+        
+        // 格式化时间，如1小时30分钟
+        function formatTime(hours, minutes) {
+            if (hours === 0 && minutes === 0) return '0分钟';
+            let result = '';
+            if (hours > 0) result += hours + '小时';
+            if (minutes > 0) result += minutes + '分钟';
+            return result;
+        }
+        
+        // 格式化小贴士，将换行符转换为HTML
+        function formatTips(tips) {
+            return tips.replace(/\n/g, '<br>');
+        }
+    });
+</script>
+{% endblock %} 

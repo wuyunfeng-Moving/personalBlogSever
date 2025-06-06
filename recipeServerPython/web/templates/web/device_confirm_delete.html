@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}确认删除设备{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">确认删除设备</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        您确定要删除设备 <strong>{{ device.name }}</strong> 吗？此操作不可逆。
+                    </div>
+                    
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">设备信息</h5>
+                            <table class="table">
+                                <tr>
+                                    <th style="width: 30%">设备名称：</th>
+                                    <td>{{ device.name }}</td>
+                                </tr>
+                                <tr>
+                                    <th>设备型号：</th>
+                                    <td>{{ device.model }}</td>
+                                </tr>
+                                <tr>
+                                    <th>设备ID：</th>
+                                    <td>{{ device.device_id }}</td>
+                                </tr>
+                                <tr>
+                                    <th>状态：</th>
+                                    <td>
+                                        {% if device.is_active %}
+                                            <span class="badge bg-success">激活</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">未激活</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>创建时间：</th>
+                                    <td>{{ device.created_at|date:"Y-m-d H:i" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{% url 'web:device_list' %}" class="btn btn-secondary me-md-2">
+                                <i class="fas fa-times"></i> 取消
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> 确认删除
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

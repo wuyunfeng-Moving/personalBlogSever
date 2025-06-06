@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}审核菜谱 - {{ recipe.title }} - 菜谱服务器{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="mb-4">
+        <a href="{% url 'web:review_submissions' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> 返回审核列表
+        </a>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h1 class="h3 mb-0">审核菜谱: {{ recipe.title }}</h1>
+        </div>
+        <div class="card-body">
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    {% if recipe.image %}
+                    <img src="{{ recipe.image.url }}" alt="{{ recipe.title }}" class="img-fluid rounded">
+                    {% else %}
+                    <div class="bg-light p-4 text-center rounded">
+                        <span class="text-muted">无图片</span>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-8">
+                    <h2 class="h4 mb-3">基本信息</h2>
+                    <dl class="row">
+                        <dt class="col-sm-3">标题</dt>
+                        <dd class="col-sm-9">{{ recipe.title }}</dd>
+
+                        <dt class="col-sm-3">作者</dt>
+                        <dd class="col-sm-9">{{ recipe.author.username }}</dd>
+
+                        <dt class="col-sm-3">提交时间</dt>
+                        <dd class="col-sm-9">{{ recipe.created_at|date:"Y-m-d H:i:s" }}</dd>
+
+                        <dt class="col-sm-3">准备时间</dt>
+                        <dd class="col-sm-9">{{ recipe.prep_time }} 分钟</dd>
+
+                        <dt class="col-sm-3">烹饪时间</dt>
+                        <dd class="col-sm-9">{{ recipe.cook_time }} 分钟</dd>
+
+                        <dt class="col-sm-3">份量</dt>
+                        <dd class="col-sm-9">{{ recipe.servings }} 人份</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2 class="h4 mb-3">描述</h2>
+                    <div class="p-3 bg-light rounded">
+                        <p>{{ recipe.description|linebreaks }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h2 class="h4 mb-3">食材</h2>
+                    <ul class="list-group">
+                        {% for ingredient in ingredients %}
+                        <li class="list-group-item">
+                            {{ ingredient.name }} {{ ingredient.amount }} {{ ingredient.unit }}
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-muted">无食材信息</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h2 class="h4 mb-3">兼容设备</h2>
+                    <ul class="list-group">
+                        {% for device in compatible_devices %}
+                        <li class="list-group-item">
+                            {{ device.name }} ({{ device.model_identifier }})
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-muted">无兼容设备</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2 class="h4 mb-3">制作步骤</h2>
+                    <ol class="list-group list-group-numbered">
+                        {% for step in steps %}
+                        <li class="list-group-item d-flex">
+                            <div class="ms-2 me-auto">
+                                <div>{{ step.description }}</div>
+                                {% if step.timer %}
+                                <span class="badge bg-warning text-dark">计时器: {{ step.timer }} 秒</span>
+                                {% endif %}
+                            </div>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-muted">无步骤信息</li>
+                        {% endfor %}
+                    </ol>
+                </div>
+            </div>
+
+            <form method="post" class="mt-4">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="status" class="form-label">审核结果</label>
+                    <select name="status" id="status" class="form-select">
+                        <option value="pending" {% if recipe.status == 'pending' %}selected{% endif %}>待审核</option>
+                        <option value="published" {% if recipe.status == 'published' %}selected{% endif %}>批准发布</option>
+                        <option value="rejected" {% if recipe.status == 'rejected' %}selected{% endif %}>拒绝</option>
+                    </select>
+                    <div class="form-text">
+                        注意：状态只能按以下规则转换：
+                        <ul class="mb-0">
+                            <li>待审核 → 批准发布 或 拒绝</li>
+                            <li>已发布 → 拒绝</li>
+                            <li>已拒绝 → 待审核</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="review_comment" class="form-label">审核评论</label>
+                    <textarea name="review_comment" id="review_comment" class="form-control" rows="3">{{ recipe.review_comment }}</textarea>
+                    <div class="form-text">请提供批准或拒绝的原因，拒绝时此内容会发送给用户</div>
+                </div>
+                <div class="d-flex justify-content-end">
+                    <a href="{% url 'web:review_submissions' %}" class="btn btn-outline-secondary me-2">取消</a>
+                    <button type="submit" class="btn btn-primary">保存审核结果</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

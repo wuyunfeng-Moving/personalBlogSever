@@ -1,0 +1,17 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Your rule content
+ Cursor规则：实现开发流程规范
+每次开发新功能或修改将遵循以下流程：
+项目说明更新 - 修改project.md，新增需求描述
+接口文档更新 - 更新api_docs.md，添加新接口或修改现有接口
+测试用例更新 - 更新test_cases.md，添加新测试场景
+测试代码更新 - 编写相应的测试函数
+功能代码修改 - 实现或修改功能
+测试验证 - 运行测试确保所有代码正常工作
+- You can @ files here
+- You can use markdown but dont have to
