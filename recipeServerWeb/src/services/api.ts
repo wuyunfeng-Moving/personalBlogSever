@@ -1,125 +1,148 @@
 import axios from 'axios';
 
-// 创建一个API配置文件
-export interface Recipe {
+// 博客文章接口
+export interface BlogPost {
   id: number;
   title: string;
-  description: string;
+  slug: string;
+  excerpt: string;
+  content?: string;
+  featured_image?: string;
   author: {
     id: number;
     username: string;
+    display_name?: string;
     email?: string;
+    avatar?: string;
     first_name?: string;
     last_name?: string;
     date_joined?: string;
   };
-  steps: Array<
-    string | { stepNo: number; stepDescription: string; imageUrl?: string }
-  >;
-  ingredients: Array<string | { name: string; amount?: string; unit?: string }>;
-  staple_food: Array<string | { name: string; amount?: string; unit?: string }>;
-  prep_time_minutes: number;
-  cook_time_minutes: number;
-  servings: number;
-  image?: string;
-  imageUrl?: string;
-  difficulty?: string | number;
-  suitable_person?: string | number;
-  tags?: string[] | string;
-  work_modes?: string[] | string;
-  temperature_value?: number;
-  temperature_unit?: string;
-  comal_position?: string;
-  status: string;
+  categories: Category[];
+  tags: Tag[];
   created_at: string;
   updated_at: string;
-  device_types?: { model_identifier: string; command: string }[];
-  cloud_commands?: any;
+  published_at?: string;
+  view_count: number;
+  is_featured: boolean;
+  allow_comments: boolean;
+  status: 'draft' | 'pending' | 'published' | 'rejected';
+  meta_title?: string;
+  meta_description?: string;
+  meta_keywords?: string;
+  related_posts?: {
+    id: number;
+    title: string;
+    slug: string;
+  }[];
 }
 
-// 根据环境提供不同的API基础URL
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
-
-// 安全地访问localStorage
-const safeStorage = {
-  getItem: (key: string): string | null => {
-    try {
-      return localStorage.getItem(key);
-    } catch (error) {
-      console.warn('无法访问localStorage:', error);
-      return null;
-    }
-  },
-  setItem: (key: string, value: string): void => {
-    try {
-      localStorage.setItem(key, value);
-    } catch (error) {
-      console.warn('无法访问localStorage:', error);
-    }
-  },
-  removeItem: (key: string): void => {
-    try {
-      localStorage.removeItem(key);
-    } catch (error) {
-      console.warn('无法访问localStorage:', error);
-    }
-  }
-};
-
-export interface RecipeListResponse {
-  count: number;
-  results: Recipe[];
-}
-
-// 设备类型相关接口
-export interface DeviceModel {
+// 分类接口
+export interface Category {
   id: number;
-  model_identifier: string;
   name: string;
-  status: 'pending' | 'approved' | 'rejected';
-  command_template?: string;
+  slug: string;
+  description?: string;
+  post_count?: number;
+  parent?: {
+    id: number;
+    name: string;
+    slug: string;
+  } | null;
 }
 
-export interface DeviceModelListResponse {
-  count: number;
-  results: DeviceModel[];
+// 标签接口
+export interface Tag {
+  id: number;
+  name: string;
+  slug: string;
+  post_count?: number;
 }
 
-export interface CommandStep {
-  stepNo: number;
-  stepDescription: string;
+// 评论接口
+export interface Comment {
+  id: number;
+  author_name: string;
+  author_email: string;
+  author_url?: string;
+  content: string;
+  created_at: string;
+  is_approved: boolean;
+  parent?: number | null;
+  replies?: Comment[];
 }
 
-export interface CloudCommandData {
-  model: string;
-  hex_command: string;
-  steps: CommandStep[];
-}
-
-export interface RecipeFormData {
+// 搜索结果接口
+export interface SearchResult {
+  id: number;
   title: string;
-  description: string;
-  steps: Array<{
-    stepNo: number;
-    stepDescription: string;
-    imageUrl?: string;
-  }>;
-  ingredients: string[];
-  staple_food: string[];
-  difficulty: string;
-  prep_time_minutes: number;
-  cook_time_minutes: number;
-  servings: number;
-  tags?: string;
-  suitable_person?: number;
-  work_modes?: string;
-  temperature_value?: number;
-  temperature_unit?: string;
-  comal_position?: string;
-  cloud_commands?: CloudCommandData[];
-  status?: 'draft' | 'pending' | 'published' | 'rejected';
+  slug: string;
+  excerpt: string;
+  highlight?: string;
+  published_at: string;
+  relevance_score?: number;
 }
 
+// 归档接口
+export interface ArchiveMonth {
+  month: number;
+  month_name: string;
+  post_count: number;
+}
+
+export interface ArchiveYear {
+  year: number;
+  months: ArchiveMonth[];
+  year_total: number;
+}
+
+// 统计信息接口
+export interface BlogStats {
+  total_posts: number;
+  total_categories: number;
+  total_tags: number;
+  total_comments: number;
+  total_views: number;
+  latest_post?: {
+    title: string;
+    published_at: string;
+  };
+}
+
+// 分页响应接口
+export interface PaginatedResponse<T> {
+  count: number;
+  next?: string | null;
+  previous?: string | null;
+  results: T[];
+}
+
+// 博客文章表单数据
+export interface BlogPostFormData {
+  title: string;
+  content: string;
+  excerpt?: string;
+  featured_image?: File | string;
+  categories?: number[];
+  tags?: string[];
+  is_featured?: boolean;
+  allow_comments?: boolean;
+  status?: 'draft' | 'pending' | 'published';
+  meta_title?: string;
+  meta_description?: string;
+  meta_keywords?: string;
+}
+
+// 评论提交数据
+export interface CommentFormData {
+  author_name: string;
+  author_email: string;
+  author_url?: string;
+  content: string;
+  parent?: number | null;
+}
+
+// 认证相关接口保持不变
 export interface RegisterData {
   username: string;
   password: string;
@@ -151,12 +174,41 @@ export interface UserProfile {
   is_staff?: boolean;
 }
 
+// 根据环境提供不同的API基础URL
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+
+// 安全地访问localStorage
+const safeStorage = {
+  getItem: (key: string): string | null => {
+    try {
+      return localStorage.getItem(key);
+    } catch (error) {
+      console.warn('无法访问localStorage:', error);
+      return null;
+    }
+  },
+  setItem: (key: string, value: string): void => {
+    try {
+      localStorage.setItem(key, value);
+    } catch (error) {
+      console.warn('无法访问localStorage:', error);
+    }
+  },
+  removeItem: (key: string): void => {
+    try {
+      localStorage.removeItem(key);
+    } catch (error) {
+      console.warn('无法访问localStorage:', error);
+    }
+  }
+};
+
 // 创建axios实例
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json'  // 明确要求JSON响应
+    'Accept': 'application/json; version=1'
   },
   timeout: 10000,
 });
@@ -210,15 +262,12 @@ apiClient.interceptors.response.use(
     console.error('Response error:', error.response?.status, error.config?.url);
     
     if (error.response) {
-      // 服务器返回错误状态码
       console.error('Error data:', error.response.data);
       console.error('Error status:', error.response.status);
       console.error('Error headers:', error.response.headers);
     } else if (error.request) {
-      // 请求已发送但没有收到响应
       console.error('No response received:', error.request);
     } else {
-      // 请求配置出错
       console.error('Error message:', error.message);
     }
 
@@ -226,7 +275,6 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
-        // 尝试使用refresh_token或user对象中的refresh获取新令牌
         let refreshToken = safeStorage.getItem('refresh_token');
         if (!refreshToken) {
           const userStr = safeStorage.getItem('user');
@@ -247,7 +295,6 @@ apiClient.interceptors.response.use(
         const { access } = response.data;
         safeStorage.setItem('access_token', access);
         
-        // 如果存在user对象，则更新其中的access
         const userStr = safeStorage.getItem('user');
         if (userStr) {
           try {
@@ -262,7 +309,6 @@ apiClient.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${access}`;
         return apiClient(originalRequest);
       } catch (error) {
-        // 刷新令牌失败，清除所有认证数据
         safeStorage.removeItem('access_token');
         safeStorage.removeItem('refresh_token');
         safeStorage.removeItem('user');
@@ -274,105 +320,157 @@ apiClient.interceptors.response.use(
   }
 );
 
+// 博客API接口
 const api = {
-  // 获取菜谱列表
-  getRecipes: async (params?: { model?: string; author?: string }): Promise<RecipeListResponse> => {
-    const response = await apiClient.get('/recipes/', { params });
+  // ========== 文章相关接口 ==========
+  
+  // 获取文章列表
+  getPosts: async (params?: {
+    page?: number;
+    page_size?: number;
+    category?: string;
+    tag?: string;
+    year?: number;
+    month?: number;
+    featured?: boolean;
+    search?: string;
+  }): Promise<PaginatedResponse<BlogPost>> => {
+    const response = await apiClient.get('/posts/', { params });
     return response.data;
   },
 
-  // 获取设备类型列表
-  getDeviceModels: async (): Promise<DeviceModelListResponse> => {
-    const response = await apiClient.get('/device-models/');
+  // 获取文章详情
+  getPost: async (slug: string): Promise<BlogPost> => {
+    const response = await apiClient.get(`/posts/${slug}/`);
     return response.data;
   },
 
-  // 获取菜谱详情
-  getRecipeDetail: async (id: number | string): Promise<Recipe> => {
-    const response = await apiClient.get(`/recipes/${id}/`);
+  // 获取置顶文章
+  getFeaturedPosts: async (limit?: number): Promise<{ results: BlogPost[] }> => {
+    const response = await apiClient.get('/posts/featured/', { params: { limit } });
     return response.data;
   },
 
-  // 获取设备类型详情
-  getDeviceModelDetail: async (id: number | string): Promise<DeviceModel> => {
-    const response = await apiClient.get(`/device-models/${id}/`);
+  // 获取热门文章
+  getPopularPosts: async (params?: {
+    limit?: number;
+    period?: 'week' | 'month' | 'year' | 'all';
+  }): Promise<{ results: BlogPost[] }> => {
+    const response = await apiClient.get('/posts/popular/', { params });
     return response.data;
   },
 
-  // 创建新菜谱
-  createRecipe: async (data: RecipeFormData | FormData): Promise<Recipe> => {
+  // 创建文章（需要认证）
+  createPost: async (data: BlogPostFormData | FormData): Promise<BlogPost> => {
     const headers = data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : undefined;
-    const response = await apiClient.post('/recipes/create/', data, { headers });
+    const response = await apiClient.post('/posts/', data, { headers });
     return response.data;
   },
 
-  // 更新菜谱
-  updateRecipe: async (id: number | string, data: RecipeFormData | FormData): Promise<Recipe> => {
+  // 更新文章（需要认证）
+  updatePost: async (slug: string, data: BlogPostFormData | FormData): Promise<BlogPost> => {
     const headers = data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : undefined;
-    const response = await apiClient.put(`/recipes/${id}/update/`, data, { headers });
+    const response = await apiClient.put(`/posts/${slug}/`, data, { headers });
     return response.data;
   },
 
-  // 删除菜谱
-  deleteRecipe: async (id: number | string): Promise<void> => {
-    await apiClient.delete(`/recipes/${id}/delete/`);
+  // 删除文章（需要认证）
+  deletePost: async (slug: string): Promise<void> => {
+    await apiClient.delete(`/posts/${slug}/`);
   },
 
-  // 提交菜谱审核
-  submitRecipeForReview: async (id: number | string): Promise<Recipe> => {
-    const response = await apiClient.put(`/recipes/${id}/submit-review/`);
+  // ========== 分类相关接口 ==========
+  
+  // 获取分类列表
+  getCategories: async (include_count?: boolean): Promise<{ results: Category[] }> => {
+    const response = await apiClient.get('/categories/', { params: { include_count } });
     return response.data;
   },
 
-  // 取消菜谱审核
-  cancelRecipeReview: async (id: number | string): Promise<Recipe> => {
-    const response = await apiClient.put(`/recipes/${id}/cancel-review/`);
+  // 获取分类详情及其文章
+  getCategory: async (slug: string, params?: {
+    page?: number;
+    page_size?: number;
+  }): Promise<{
+    category: Category;
+    posts: PaginatedResponse<BlogPost>;
+  }> => {
+    const response = await apiClient.get(`/categories/${slug}/`, { params });
     return response.data;
   },
 
-  // 获取菜谱命令
-  getRecipeCommands: async (recipeId: number | string, modelIdentifier: string): Promise<any> => {
-    const response = await apiClient.get(`/recipes/${recipeId}/commands/`, { 
-      params: { model: modelIdentifier } 
-    });
+  // ========== 标签相关接口 ==========
+  
+  // 获取标签列表
+  getTags: async (params?: {
+    popular?: boolean;
+    limit?: number;
+  }): Promise<{ results: Tag[] }> => {
+    const response = await apiClient.get('/tags/', { params });
     return response.data;
   },
 
-  // 获取我的菜谱列表
-  getMyRecipes: async (): Promise<RecipeListResponse> => {
-    const response = await apiClient.get('/recipes/', { params: { author: 'me' } });
+  // 获取标签文章
+  getTag: async (slug: string, params?: {
+    page?: number;
+    page_size?: number;
+  }): Promise<{
+    tag: Tag;
+    posts: PaginatedResponse<BlogPost>;
+  }> => {
+    const response = await apiClient.get(`/tags/${slug}/`, { params });
     return response.data;
   },
 
-  // 创建新设备类型
-  createDeviceModel: async (deviceModel: Omit<DeviceModel, 'id' | 'status'>): Promise<DeviceModel> => {
-    const response = await apiClient.post('/device-models/create/', deviceModel);
+  // ========== 评论相关接口 ==========
+  
+  // 获取文章评论
+  getComments: async (postId: number, page?: number): Promise<PaginatedResponse<Comment>> => {
+    const response = await apiClient.get(`/posts/${postId}/comments/`, { params: { page } });
     return response.data;
   },
 
-  // 更新设备类型
-  updateDeviceModel: async (id: number | string, deviceModel: Partial<Omit<DeviceModel, 'id' | 'status'>>): Promise<DeviceModel> => {
-    const response = await apiClient.put(`/device-models/${id}/update/`, deviceModel);
+  // 提交评论
+  createComment: async (postId: number, data: CommentFormData): Promise<Comment> => {
+    const response = await apiClient.post(`/posts/${postId}/comments/`, data);
     return response.data;
   },
 
-  // 删除设备类型
-  deleteDeviceModel: async (id: number | string): Promise<void> => {
-    await apiClient.delete(`/device-models/${id}/delete/`);
-  },
-
-  // 获取待审核的菜谱列表
-  getPendingRecipes: async (): Promise<RecipeListResponse> => {
-    const response = await apiClient.get('/recipes/pending/');
+  // ========== 搜索接口 ==========
+  
+  // 搜索文章
+  search: async (params: {
+    q: string;
+    page?: number;
+    page_size?: number;
+    category?: string;
+  }): Promise<{
+    query: string;
+    count: number;
+    results: SearchResult[];
+  }> => {
+    const response = await apiClient.get('/search/', { params });
     return response.data;
   },
 
-  // 审核菜谱
-  reviewRecipe: async (id: number | string, action: 'approve' | 'reject'): Promise<{ status: string }> => {
-    const response = await apiClient.put(`/recipes/${id}/review/`, { action });
+  // ========== 归档接口 ==========
+  
+  // 获取归档信息
+  getArchive: async (): Promise<{ results: ArchiveYear[] }> => {
+    const response = await apiClient.get('/archive/');
     return response.data;
   },
 
+  // ========== 统计接口 ==========
+  
+  // 获取博客统计信息
+  getStats: async (): Promise<BlogStats> => {
+    const response = await apiClient.get('/stats/');
+    return response.data;
+  },
+
+  // ========== 认证相关接口 ==========
+  
   // 注册新用户
   register: async (data: RegisterData): Promise<UserProfile> => {
     const response = await apiClient.post('/auth/register/', data);
@@ -394,6 +492,26 @@ const api = {
   // 获取用户个人资料
   getUserProfile: async (): Promise<UserProfile> => {
     const response = await apiClient.get('/auth/profile/');
+    return response.data;
+  },
+
+  // ========== 管理员接口 ==========
+  
+  // 获取待审核文章列表（管理员）
+  getPendingPosts: async (): Promise<PaginatedResponse<BlogPost>> => {
+    const response = await apiClient.get('/posts/pending/');
+    return response.data;
+  },
+
+  // 审核文章（管理员）
+  reviewPost: async (slug: string, action: 'approve' | 'reject'): Promise<{ status: string }> => {
+    const response = await apiClient.put(`/posts/${slug}/review/`, { action });
+    return response.data;
+  },
+
+  // 获取我的文章列表
+  getMyPosts: async (): Promise<PaginatedResponse<BlogPost>> => {
+    const response = await apiClient.get('/posts/', { params: { author: 'me' } });
     return response.data;
   }
 };

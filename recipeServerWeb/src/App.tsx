@@ -4,9 +4,9 @@ import { Layout, Spin, message } from 'antd';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import CreateRecipe from './pages/CreateRecipe';
+import CreatePost from './pages/CreatePost';
 import { getCurrentUser, UserProfile } from './services/authService';
-import RecipeDetail from './pages/RecipeDetail';
+import PostDetail from './pages/PostDetail';
 import PendingReviews from './pages/PendingReviews';
 
 const { Header, Content } = Layout;
@@ -108,7 +108,7 @@ const App: React.FC = () => {
           alignItems: 'center',
           justifyContent: 'space-between'
         }}>
-          <h1 style={{ margin: 0 }}>菜谱管理系统</h1>
+          <h1 style={{ margin: 0 }}>个人博客系统</h1>
         </Header>
         <Content>
           <Routes>
@@ -129,20 +129,20 @@ const App: React.FC = () => {
               }
             />
             <Route path="/" element={<Home />} />
-            <Route path="/recipes/:id" element={<RecipeDetail />} />
+            <Route path="/posts/:id" element={<PostDetail />} />
             <Route 
-              path="/create-recipe" 
+              path="/create-post" 
               element={
                 <PrivateRoute>
-                  <CreateRecipe />
+                  <CreatePost />
                 </PrivateRoute>
               } 
             />
             <Route 
-              path="/edit-recipe/:id" 
+              path="/edit-post/:id" 
               element={
                 <PrivateRoute>
-                  <CreateRecipe />
+                  <CreatePost />
                 </PrivateRoute>
               } 
             />

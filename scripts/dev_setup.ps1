@@ -11,13 +11,6 @@ $ErrorActionPreference = "Stop"
 
 Write-Host "🚀 开始设置个人博客系统开发环境..." -ForegroundColor Green
 
-# 检查是否以管理员身份运行
-function Test-AdminRights {
-    $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
-    $principal = New-Object Security.Principal.WindowsPrincipal($currentUser)
-    return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-}
-
 # 检查系统依赖
 function Test-Dependencies {
     Write-Host "📋 检查系统依赖..." -ForegroundColor Yellow
@@ -33,12 +26,10 @@ function Test-Dependencies {
             if ($major -ge 3 -and $minor -ge 8) {
                 Write-Host "✅ Python $pythonVersion" -ForegroundColor Green
             } else {
-                Write-Host "❌ Python 版本过低，需要 3.8+，当前: $pythonVersion" -ForegroundColor Red
                 $dependencies += "Python 3.8+"
             }
         }
     } catch {
-        Write-Host "❌ 未找到 Python" -ForegroundColor Red
         $dependencies += "Python 3.8+"
     }
     
@@ -47,42 +38,34 @@ function Test-Dependencies {
         $nodeVersion = node --version 2>$null
         if ($nodeVersion -match "v(\d+)\.(\d+)") {
             $major = [int]$matches[1]
-            if ($major -ge 18) {
+            if ($major -ge 16) {
                 Write-Host "✅ Node.js $nodeVersion" -ForegroundColor Green
             } else {
-                Write-Host "❌ Node.js 版本过低，需要 18+，当前: $nodeVersion" -ForegroundColor Red
-                $dependencies += "Node.js 18+"
+                $dependencies += "Node.js 16+"
             }
         }
     } catch {
-        Write-Host "❌ 未找到 Node.js" -ForegroundColor Red
-        $dependencies += "Node.js 18+"
+        $dependencies += "Node.js 16+"
     }
     
-    # 检查 Git
+    # 检查 npm
     try {
-        $gitVersion = git --version 2>$null
-        Write-Host "✅ Git $gitVersion" -ForegroundColor Green
+        $npmVersion = npm --version 2>$null
+        Write-Host "✅ npm $npmVersion" -ForegroundColor Green
     } catch {
-        Write-Host "❌ 未找到 Git" -ForegroundColor Red
-        $dependencies += "Git"
+        $dependencies += "npm"
     }
     
-    if ($dependencies.Count -gt 0) {
-        Write-Host "`n❌ 缺少以下依赖:" -ForegroundColor Red
+    if ($dependencies.Length -gt 0) {
+        Write-Host "❌ 缺少以下依赖:" -ForegroundColor Red
         foreach ($dep in $dependencies) {
             Write-Host "   - $dep" -ForegroundColor Red
         }
-        Write-Host "`n请安装以下软件:" -ForegroundColor Yellow
-        Write-Host "   - Python: https://www.python.org/downloads/" -ForegroundColor Cyan
-        Write-Host "   - Node.js: https://nodejs.org/" -ForegroundColor Cyan
-        Write-Host "   - Git: https://git-scm.com/download/win" -ForegroundColor Cyan
-        Write-Host "`n或使用 Chocolatey 安装:" -ForegroundColor Yellow
-        Write-Host "   choco install python nodejs git" -ForegroundColor Cyan
+        Write-Host "请安装后重新运行此脚本。" -ForegroundColor Yellow
         exit 1
     }
     
-    Write-Host "✅ 系统依赖检查完成" -ForegroundColor Green
+    Write-Host "✅ 系统依赖检查通过" -ForegroundColor Green
 }
 
 # 设置后端
@@ -121,7 +104,7 @@ ALLOWED_HOSTS=localhost,127.0.0.1
 EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
 CORS_ALLOW_ALL_ORIGINS=True
 "@
-        $envContent | Out-File -FilePath ".env" -Encoding UTF8
+        Set-Content -Path ".env" -Value $envContent -Encoding UTF8
         Write-Host "✅ 创建后端环境配置" -ForegroundColor Green
     }
     
@@ -175,11 +158,11 @@ function Setup-Frontend {
     if (-not (Test-Path ".env")) {
         $envContent = @"
 VITE_API_BASE_URL=http://localhost:8000/api/v1
-VITE_APP_TITLE=个人博客 - 开发环境
-VITE_APP_DESCRIPTION=基于 React + Django 的博客系统
+VITE_APP_TITLE=个人博客系统 - 开发环境
+VITE_APP_DESCRIPTION=基于 React + Django 的个人博客系统
 VITE_NODE_ENV=development
 "@
-        $envContent | Out-File -FilePath ".env" -Encoding UTF8
+        Set-Content -Path ".env" -Value $envContent -Encoding UTF8
         Write-Host "✅ 创建前端环境配置" -ForegroundColor Green
     }
     
@@ -190,55 +173,24 @@ VITE_NODE_ENV=development
 function New-StartupScripts {
     Write-Host "📝 创建启动脚本..." -ForegroundColor Yellow
     
-    # 确保 scripts 目录存在
-    if (-not (Test-Path "scripts")) {
-        New-Item -ItemType Directory -Path "scripts" | Out-Null
-    }
-    
     # 后端启动脚本
-    $backendScript = @'
+    $backendScript = @"
 # Django 后端启动脚本
 Set-Location "recipeServerPython"
 & "venv\Scripts\Activate.ps1"
 Write-Host "🐍 启动 Django 开发服务器..." -ForegroundColor Green
 python manage.py runserver
-'@
-    $backendScript | Out-File -FilePath "scripts\start_backend.ps1" -Encoding UTF8
+"@
+    Set-Content -Path "scripts\start_backend.ps1" -Value $backendScript -Encoding UTF8
     
     # 前端启动脚本
-    $frontendScript = @'
+    $frontendScript = @"
 # React 前端启动脚本
 Set-Location "recipeServerWeb"
 Write-Host "⚛️ 启动 React 开发服务器..." -ForegroundColor Green
 npm run dev
-'@
-    $frontendScript | Out-File -FilePath "scripts\start_frontend.ps1" -Encoding UTF8
-    
-    # 全栈启动脚本
-    $fullStackScript = @'
-# 全栈启动脚本
-Write-Host "🚀 启动全栈开发环境..." -ForegroundColor Green
-
-# 启动后端
-Write-Host "启动后端服务..." -ForegroundColor Yellow
-$backendJob = Start-Job -ScriptBlock {
-    Set-Location $using:PWD
-    Set-Location "recipeServerPython"
-    & "venv\Scripts\Activate.ps1"
-    python manage.py runserver 2>&1 | Tee-Object -FilePath "..\logs\backend.log"
-}
-
-Write-Host "🐍 Django 服务器已启动 (作业ID: $($backendJob.Id))" -ForegroundColor Green
-
-# 等待后端启动
-Start-Sleep -Seconds 5
-
-# 启动前端
-Write-Host "⚛️ 启动 React 开发服务器..." -ForegroundColor Yellow
-Set-Location "recipeServerWeb"
-npm run dev
-'@
-    $fullStackScript | Out-File -FilePath "scripts\start_all.ps1" -Encoding UTF8
+"@
+    Set-Content -Path "scripts\start_frontend.ps1" -Value $frontendScript -Encoding UTF8
     
     Write-Host "✅ 创建启动脚本" -ForegroundColor Green
 }
@@ -274,7 +226,6 @@ function Main {
         Write-Host "`n📋 接下来你可以:" -ForegroundColor Cyan
         Write-Host "   1. 运行后端: .\scripts\start_backend.ps1" -ForegroundColor White
         Write-Host "   2. 运行前端: .\scripts\start_frontend.ps1" -ForegroundColor White
-        Write-Host "   3. 同时运行: .\scripts\start_all.ps1" -ForegroundColor White
         Write-Host "`n🌐 访问地址:" -ForegroundColor Cyan
         Write-Host "   - 前端应用: http://localhost:5173" -ForegroundColor White
         Write-Host "   - 后端 API: http://localhost:8000/api/v1" -ForegroundColor White
