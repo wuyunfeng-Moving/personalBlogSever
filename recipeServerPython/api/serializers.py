@@ -31,13 +31,17 @@ class RecipeDetailSerializer(serializers.ModelSerializer):
     compatible_models = DeviceModelSerializer(many=True, read_only=True)
     # Consider using a custom field for ingredients if validation/structure is complex
     ingredients = serializers.JSONField()
+    staple_food = serializers.JSONField()
+    steps = serializers.JSONField()
 
     class Meta:
         model = Recipe
         fields = [
-            'id', 'title', 'description', 'ingredients', 'instructions',
+            'id', 'title', 'description', 'ingredients', 'staple_food', 'steps',
             'prep_time_minutes', 'cook_time_minutes', 'servings', 'author',
-            'created_at', 'updated_at', 'image', 'compatible_models'
+            'created_at', 'updated_at', 'image', 'compatible_models', 'difficulty',
+            'suitable_person', 'tips', 'tags', 'work_modes', 'temperature_value',
+            'temperature_unit', 'score', 'collection_count', 'page_view'
         ]
 
 # Serializer for Command Output (Structure depends on generation logic)

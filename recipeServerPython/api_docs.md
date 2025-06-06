@@ -1,5 +1,20 @@
 # 博客系统 API 接口文档
 
+## 📚 交互式API文档
+
+我们提供了多种方式来浏览和测试API：
+
+*   **Swagger UI**: `http://localhost:8000/api/docs/` - 现代化的交互式API文档界面
+*   **ReDoc**: `http://localhost:8000/api/redoc/` - 美观的API文档阅读界面  
+*   **OpenAPI Schema**: `http://localhost:8000/api/schema/` - 原始的OpenAPI 3.0规范文件
+
+### Swagger UI 特性
+- 🔍 **实时测试**: 直接在浏览器中测试API端点
+- 📖 **详细文档**: 每个端点都有详细的参数说明和示例
+- 🔐 **认证支持**: 支持JWT令牌认证测试
+- 📝 **请求示例**: 提供完整的请求和响应示例
+- 🏷️ **分类组织**: API按功能模块分类展示
+
 ## 0. 重要说明
 
 *   **主要用途**: 此 API 设计用于第三方应用程序、移动App或RSS阅读器与个人博客系统交互。

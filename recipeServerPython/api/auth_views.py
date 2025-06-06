@@ -7,6 +7,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema, OpenApiExample
 import logging
 
 logger = logging.getLogger(__name__)
@@ -69,6 +70,26 @@ class CustomTokenObtainPairSerializer(serializers.Serializer):
         else:
             raise serializers.ValidationError('必须提供用户名和密码')
 
+@extend_schema(
+    tags=['认证'],
+    operation_id='user_register',
+    summary='用户注册',
+    description='创建新用户账号并返回JWT令牌',
+    request=UserRegistrationSerializer,
+    examples=[
+        OpenApiExample(
+            name='注册示例',
+            value={
+                "username": "newuser",
+                "email": "user@example.com",
+                "password": "securepassword123",
+                "password2": "securepassword123",
+                "first_name": "张",
+                "last_name": "三"
+            }
+        )
+    ]
+)
 class RegisterView(APIView):
     """用户注册"""
     permission_classes = [permissions.AllowAny]
@@ -104,6 +125,22 @@ class RegisterView(APIView):
                 'message': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+@extend_schema(
+    tags=['认证'],
+    operation_id='user_login',
+    summary='用户登录',
+    description='使用用户名和密码获取JWT访问令牌',
+    request=CustomTokenObtainPairSerializer,
+    examples=[
+        OpenApiExample(
+            name='登录示例',
+            value={
+                "username": "testuser",
+                "password": "password123"
+            }
+        )
+    ]
+)
 class LoginView(APIView):
     """用户登录"""
     permission_classes = [permissions.AllowAny]
@@ -128,10 +165,21 @@ class LoginView(APIView):
                 'message': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+@extend_schema(
+    tags=['认证'],
+    operation_id='user_profile',
+    summary='获取用户信息',
+    description='获取当前登录用户的详细信息',
+    responses=UserProfileSerializer
+)
 class UserProfileView(APIView):
     """获取用户信息"""
     permission_classes = [permissions.IsAuthenticated]
     
+    @extend_schema(
+        operation_id='get_user_profile',
+        summary='获取用户资料'
+    )
     def get(self, request):
         try:
             serializer = UserProfileSerializer(request.user)
@@ -143,6 +191,11 @@ class UserProfileView(APIView):
                 'message': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
+    @extend_schema(
+        operation_id='update_user_profile',
+        summary='更新用户资料',
+        request=UserProfileSerializer
+    )
     def put(self, request):
         try:
             serializer = UserProfileSerializer(request.user, data=request.data, partial=True)
@@ -162,6 +215,20 @@ class UserProfileView(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # 使用函数视图的替代方案
+@extend_schema(
+    tags=['认证'],
+    operation_id='refresh_token',
+    summary='刷新访问令牌',
+    description='使用refresh token获取新的access token',
+    examples=[
+        OpenApiExample(
+            name='令牌刷新示例',
+            value={
+                "refresh": "your_refresh_token_here"
+            }
+        )
+    ]
+)
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
 def refresh_token_view(request):

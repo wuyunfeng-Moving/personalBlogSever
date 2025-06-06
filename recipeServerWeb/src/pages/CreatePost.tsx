@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Form, Input, Button, Select, Card, message, Space, Upload, Typography } from 'antd';
+import { Form, Input, Button, Select, Card, message, Space, Upload, Typography, Modal } from 'antd';
 import { 
   SaveOutlined, 
   SendOutlined,
@@ -8,20 +8,14 @@ import {
   UploadOutlined
 } from '@ant-design/icons';
 import { getCurrentUser, UserProfile } from '../services/authService';
-import { createPost, updatePost, getPostById } from '../services/postService';
+import { createPost, updatePost, getPostById, getCategories } from '../services/postService';
 import type { UploadFile } from 'antd/es/upload/interface';
+import { Category } from '../services/api';
 
 const { TextArea } = Input;
 const { Option } = Select;
 
-// 博客文章分类选项
-const categoryOptions = [
-  { value: 'tech', label: '技术' },
-  { value: 'life', label: '生活' },
-  { value: 'travel', label: '旅行' },
-  { value: 'thoughts', label: '随笔' },
-  { value: 'tutorials', label: '教程' },
-];
+
 
 // Post类型定义
 interface Post {
@@ -49,6 +43,7 @@ const CreatePost: React.FC = () => {
   const [user, setUser] = useState<(UserProfile & { access: string }) | null>(null);
   const [post, setPost] = useState<Post | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -67,7 +62,18 @@ const CreatePost: React.FC = () => {
       }
     };
 
+    const loadCategories = async () => {
+      try {
+        const response = await getCategories();
+        setCategories(response.results || []);
+      } catch (error) {
+        console.error('获取分类失败:', error);
+        message.error('获取分类失败');
+      }
+    };
+
     loadUser();
+    loadCategories();
     
     if (id) {
       setIsEditing(true);
@@ -97,17 +103,12 @@ const CreatePost: React.FC = () => {
       formData.append('excerpt', values.description);
       formData.append('status', 'published'); // 直接发布
       
-      // 处理分类 - 将分类名称转换为数字ID
-      const categoryMap: { [key: string]: number } = {
-        'tech': 1,
-        'life': 2,
-        'travel': 3,
-        'thoughts': 4,
-        'tutorials': 5
-      };
-      
-      if (values.category && categoryMap[values.category]) {
-        formData.append('category_ids', JSON.stringify([categoryMap[values.category]]));
+      // 处理分类 - 将分类slug转换为数字ID
+      if (values.category) {
+        const selectedCategory = categories.find(cat => cat.slug === values.category);
+        if (selectedCategory) {
+          formData.append('category_ids', JSON.stringify([selectedCategory.id]));
+        }
       }
       
       // 处理标签
@@ -136,30 +137,102 @@ const CreatePost: React.FC = () => {
       navigate('/?tab=my-posts');
     } catch (error: any) {
       console.error('保存文章失败:', error);
+      console.error('错误详情:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+        config: error.config
+      });
+      
+      // 显示详细的错误信息
+      let errorMessage = '操作失败';
       
       if (error.response) {
         const errorData = error.response.data;
-        if (typeof errorData === 'string') {
-          message.error(`操作失败: ${errorData}`);
-        } else if (errorData.detail) {
-          message.error(`操作失败: ${errorData.detail}`);
-        } else if (errorData.error) {
-          message.error(`操作失败: ${errorData.error}`);
-        } else {
-          // 显示字段级别的错误
-          const errorMessages = [];
-          for (const [field, errors] of Object.entries(errorData)) {
-            if (Array.isArray(errors)) {
-              errorMessages.push(`${field}: ${errors.join(', ')}`);
+        const status = error.response.status;
+        
+        console.log('服务器响应数据:', errorData);
+        
+        if (status === 400) {
+          // 验证错误
+          if (typeof errorData === 'string') {
+            errorMessage = `验证失败: ${errorData}`;
+          } else if (errorData.detail) {
+            errorMessage = `验证失败: ${errorData.detail}`;
+          } else if (errorData.error) {
+            errorMessage = `验证失败: ${errorData.error}`;
+          } else if (errorData.details) {
+            // 处理详细的字段错误信息
+            const fieldErrors = [];
+            for (const [field, errors] of Object.entries(errorData.details)) {
+              if (Array.isArray(errors)) {
+                fieldErrors.push(`${field}: ${errors.join(', ')}`);
+              } else {
+                fieldErrors.push(`${field}: ${errors}`);
+              }
+            }
+            errorMessage = `验证失败: ${fieldErrors.join('; ')}`;
+          } else {
+            // 显示所有字段级别的错误
+            const fieldErrors = [];
+            for (const [field, errors] of Object.entries(errorData)) {
+              if (Array.isArray(errors)) {
+                fieldErrors.push(`${field}: ${errors.join(', ')}`);
+              } else if (typeof errors === 'string') {
+                fieldErrors.push(`${field}: ${errors}`);
+              }
+            }
+            if (fieldErrors.length > 0) {
+              errorMessage = `验证失败: ${fieldErrors.join('; ')}`;
             } else {
-              errorMessages.push(`${field}: ${errors}`);
+              errorMessage = `验证失败: ${JSON.stringify(errorData)}`;
             }
           }
-          message.error(`操作失败: ${errorMessages.join('; ')}`);
+        } else if (status === 401) {
+          errorMessage = '认证失败，请重新登录';
+        } else if (status === 403) {
+          errorMessage = '权限不足，无法执行此操作';
+        } else if (status === 500) {
+          errorMessage = '服务器内部错误，请联系管理员';
+        } else {
+          errorMessage = `服务器错误 (${status}): ${errorData?.detail || errorData?.error || JSON.stringify(errorData)}`;
         }
+      } else if (error.request) {
+        errorMessage = '网络连接失败，请检查网络或服务器状态';
       } else {
-        message.error('网络错误，请检查网络连接');
+        errorMessage = `请求失败: ${error.message}`;
       }
+      
+             // 使用 Modal 显示详细错误信息
+      Modal.error({
+        title: '操作失败',
+        content: (
+          <div>
+            <p><strong>错误信息:</strong> {errorMessage}</p>
+            {error.response && (
+              <div>
+                <p><strong>HTTP状态码:</strong> {error.response.status}</p>
+                <p><strong>服务器响应:</strong></p>
+                <pre style={{ 
+                  background: '#f5f5f5', 
+                  padding: '8px', 
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  maxHeight: '200px',
+                  overflow: 'auto'
+                }}>
+                  {JSON.stringify(error.response.data, null, 2)}
+                </pre>
+              </div>
+            )}
+          </div>
+        ),
+        width: 600,
+        maskClosable: true
+      });
+      
+      // 同时显示简单的message提示
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -177,16 +250,11 @@ const CreatePost: React.FC = () => {
       formData.append('status', 'draft'); // 保存为草稿
       
       // 处理分类
-      const categoryMap: { [key: string]: number } = {
-        'tech': 1,
-        'life': 2,
-        'travel': 3,
-        'thoughts': 4,
-        'tutorials': 5
-      };
-      
-      if (values.category && categoryMap[values.category]) {
-        formData.append('category_ids', JSON.stringify([categoryMap[values.category]]));
+      if (values.category) {
+        const selectedCategory = categories.find(cat => cat.slug === values.category);
+        if (selectedCategory) {
+          formData.append('category_ids', JSON.stringify([selectedCategory.id]));
+        }
       }
       
       // 处理标签
@@ -250,7 +318,7 @@ const CreatePost: React.FC = () => {
           layout="vertical"
           onFinish={onFinish}
           initialValues={{
-            category: 'tech',
+            category: categories.length > 0 ? categories[0].slug : undefined,
             tags: []
           }}
         >
@@ -284,9 +352,9 @@ const CreatePost: React.FC = () => {
             rules={[{ required: true, message: '请选择文章分类' }]}
           >
             <Select placeholder="请选择文章分类">
-              {categoryOptions.map(option => (
-                <Option key={option.value} value={option.value}>
-                  {option.label}
+              {categories.map(category => (
+                <Option key={category.slug} value={category.slug}>
+                  {category.name}
                 </Option>
               ))}
             </Select>

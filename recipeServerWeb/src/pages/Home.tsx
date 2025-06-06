@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, Row, Col, Typography, Spin, Alert, Tag, Empty, Menu, Select, Space, Button, Tooltip, message } from 'antd';
+import DebugHelper from '../components/DebugHelper';
 import { PlusOutlined, EditOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, FileOutlined, FileTextOutlined, AppstoreOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { AppDispatch, RootState } from '../store';
 import { fetchRecipes } from '../store/postsSlice';
@@ -156,12 +157,13 @@ const Home: React.FC = () => {
     navigate(`/edit-post/${id}`);
   };
 
-  const handlePostClick = (id: number, isMyPost = false) => {
+  const handlePostClick = (post: any, isMyPost = false) => {
     console.log('isMyPost', isMyPost);
     if (isMyPost) {
-      navigate(`/edit-post/${id}`);
+      navigate(`/edit-post/${post.id}`);
     } else {
-      navigate(`/posts/${id}`);
+      // 使用slug而不是ID进行导航
+      navigate(`/posts/${post.slug}`);
     }
   };
 
@@ -227,7 +229,7 @@ const Home: React.FC = () => {
             <Card
               title={post.title}
               hoverable
-              onClick={() => handlePostClick(post.id, isMyPosts)}
+              onClick={() => handlePostClick(post, isMyPosts)}
               cover={post.featured_image && <img alt={post.title} src={post.featured_image} />}
               style={{ cursor: 'pointer' }}
               actions={isPendingReviews ? [
@@ -374,6 +376,7 @@ const Home: React.FC = () => {
 
   return (
     <div style={{ padding: '20px' }}>
+      <DebugHelper />
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={24} md={6} lg={5} xl={4}>
           <Card>

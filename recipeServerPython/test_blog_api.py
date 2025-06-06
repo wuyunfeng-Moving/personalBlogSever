@@ -61,7 +61,7 @@ def test_blog_api():
     try:
         # 尝试登录
         login_data = {
-            'username': 'wuyunfeng1',
+            'username': 'testuser',
             'password': 'password123'
         }
         response = requests.post(f'{BASE_URL}/auth/token/', json=login_data)
@@ -80,7 +80,7 @@ def test_blog_api():
             }
             
             post_data = {
-                'title': '测试文章',
+                'title': '测试文章123',
                 'content': '这是一篇测试文章的内容。',
                 'excerpt': '这是测试文章的摘要。',
                 'status': 'published',

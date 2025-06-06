@@ -129,7 +129,7 @@ const App: React.FC = () => {
               }
             />
             <Route path="/" element={<Home />} />
-            <Route path="/posts/:id" element={<PostDetail />} />
+            <Route path="/posts/:slug" element={<PostDetail />} />
             <Route 
               path="/create-post" 
               element={

@@ -320,6 +320,46 @@ apiClient.interceptors.response.use(
   }
 );
 
+// 配置axios请求拦截器（开发环境调试）
+if (process.env.NODE_ENV === 'development') {
+  apiClient.interceptors.request.use(
+    config => {
+      console.log('🚀 API请求:', {
+        method: config.method?.toUpperCase(),
+        url: config.url,
+        params: config.params,
+        data: config.data,
+        headers: config.headers
+      });
+      return config;
+    },
+    error => {
+      console.error('❌ 请求错误:', error);
+      return Promise.reject(error);
+    }
+  );
+
+  apiClient.interceptors.response.use(
+    response => {
+      console.log('✅ API响应:', {
+        status: response.status,
+        url: response.config.url,
+        data: response.data
+      });
+      return response;
+    },
+    error => {
+      console.error('❌ 响应错误:', {
+        status: error.response?.status,
+        url: error.config?.url,
+        data: error.response?.data,
+        message: error.message
+      });
+      return Promise.reject(error);
+    }
+  );
+}
+
 // 博客API接口
 const api = {
   // ========== 文章相关接口 ==========

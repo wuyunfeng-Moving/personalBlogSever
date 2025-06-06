@@ -17,6 +17,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
+    'drf_spectacular',
 
     # Local apps
     'recipes.apps.RecipesConfig',
@@ -183,6 +184,7 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 # JWT 配置
@@ -206,4 +208,43 @@ SIMPLE_JWT = {
     'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
     'TOKEN_TYPE_CLAIM': 'token_type',
+}
+
+# drf-spectacular 配置
+SPECTACULAR_SETTINGS = {
+    'TITLE': '个人博客 API',
+    'DESCRIPTION': '现代化个人博客系统的 RESTful API，提供完整的博客文章、分类、标签、评论管理功能',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'CONTACT': {
+        'name': '博客管理员',
+        'email': 'admin@blog.com',
+    },
+    'LICENSE': {
+        'name': 'MIT License',
+    },
+    'TAGS': [
+        {
+            'name': '认证',
+            'description': '用户认证和授权相关接口',
+        },
+        {
+            'name': '文章',
+            'description': '博客文章的增删改查操作',
+        },
+        {
+            'name': '分类',
+            'description': '文章分类管理',
+        },
+        {
+            'name': '标签',
+            'description': '文章标签管理',
+        },
+        {
+            'name': '评论',
+            'description': '文章评论系统',
+        },
+    ],
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SORT_OPERATIONS': False,
 } 

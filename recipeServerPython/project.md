@@ -212,3 +212,47 @@
     *   页面缓存机制
     *   静态资源压缩
     *   CDN集成配置
+
+### 文章创建分类ID映射问题修复 (已完成)
+
+*   **问题描述**：前端文章创建时出现"请填写合法的整数值"错误，原因是前端硬编码的分类ID映射与数据库中的实际分类ID不一致。
+*   **问题分析**：
+    *   前端代码中使用硬编码的分类映射：tech: 1, life: 2, travel: 3, thoughts: 4, tutorials: 5
+    *   数据库中的实际分类ID为：技术: 3, 生活: 4, 旅行: 5, 随笔: 6, 教程: 7
+    *   导致前端传递的分类ID在数据库中不存在，触发验证错误
+*   **解决方案**：
+    *   修改前端CreatePost组件，动态获取分类数据而不是使用硬编码映射
+    *   添加getCategories API调用来获取实际的分类列表
+    *   使用分类的slug作为表单值，在提交时动态查找对应的分类ID
+    *   更新分类选择器使用动态获取的分类数据
+*   **修改文件**：
+    *   `recipeServerWeb/src/pages/CreatePost.tsx`：添加分类状态管理和动态获取逻辑
+    *   移除硬编码的categoryOptions，使用API获取的分类数据
+*   **测试结果**：修复后文章创建功能正常，分类ID验证通过
+
+### Swagger/OpenAPI 文档集成 (已完成)
+
+*   **需求描述**：为API接口添加交互式文档，提供现代化的API浏览和测试界面。
+*   **实现方案**：
+    *   集成drf-spectacular包，支持OpenAPI 3.0标准
+    *   配置Swagger UI和ReDoc两种文档界面
+    *   为所有API端点添加详细的文档注释和示例
+    *   按功能模块对API进行分类组织
+*   **功能特性**：
+    *   **Swagger UI** (`/api/docs/`)：交互式API测试界面
+    *   **ReDoc** (`/api/redoc/`)：美观的API文档阅读界面
+    *   **OpenAPI Schema** (`/api/schema/`)：标准的API规范文件
+    *   支持JWT认证测试
+    *   提供完整的请求/响应示例
+    *   参数验证和错误处理说明
+*   **修改文件**：
+    *   `requirements.txt`：添加drf-spectacular依赖
+    *   `recipe_server/settings.py`：配置drf-spectacular设置
+    *   `recipe_server/urls.py`：添加文档路由
+    *   `blog/views.py`：为博客API添加详细文档注释
+    *   `api/auth_views.py`：为认证API添加文档注释
+    *   `api_docs.md`：更新API文档说明
+*   **访问地址**：
+    *   Swagger UI: http://localhost:8000/api/docs/
+    *   ReDoc: http://localhost:8000/api/redoc/
+    *   OpenAPI Schema: http://localhost:8000/api/schema/
