@@ -95,28 +95,6 @@ class BlogPostSerializer(serializers.ModelSerializer):
         
         return post
     
-    def to_internal_value(self, data):
-        """处理FormData中的JSON字段"""
-        # 处理category_ids字段
-        if 'category_ids' in data and isinstance(data['category_ids'], str):
-            try:
-                import json
-                data = data.copy()
-                data['category_ids'] = json.loads(data['category_ids'])
-            except (json.JSONDecodeError, ValueError):
-                pass
-        
-        # 处理tag_names字段
-        if 'tag_names' in data and isinstance(data['tag_names'], str):
-            try:
-                import json
-                data = data.copy()
-                data['tag_names'] = json.loads(data['tag_names'])
-            except (json.JSONDecodeError, ValueError):
-                pass
-        
-        return super().to_internal_value(data)
-    
     def update(self, instance, validated_data):
         # 提取分类和标签数据
         category_ids = validated_data.pop('category_ids', None)

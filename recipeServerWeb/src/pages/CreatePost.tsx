@@ -103,17 +103,19 @@ const CreatePost: React.FC = () => {
       formData.append('excerpt', values.description);
       formData.append('status', 'published'); // 直接发布
       
-      // 处理分类 - 将分类slug转换为数字ID
+      // 处理分类 - 逐个附加
       if (values.category) {
         const selectedCategory = categories.find(cat => cat.slug === values.category);
         if (selectedCategory) {
-          formData.append('category_ids', JSON.stringify([selectedCategory.id]));
+          formData.append('category_ids', selectedCategory.id.toString());
         }
       }
       
-      // 处理标签
+      // 处理标签 - 逐个附加
       if (values.tags && values.tags.length > 0) {
-        formData.append('tag_names', JSON.stringify(values.tags));
+        values.tags.forEach((tag: string) => {
+          formData.append('tag_names', tag);
+        });
       }
       
       // 处理图片
@@ -249,17 +251,19 @@ const CreatePost: React.FC = () => {
       formData.append('excerpt', values.description || '');
       formData.append('status', 'draft'); // 保存为草稿
       
-      // 处理分类
+      // 处理分类 - 逐个附加
       if (values.category) {
         const selectedCategory = categories.find(cat => cat.slug === values.category);
         if (selectedCategory) {
-          formData.append('category_ids', JSON.stringify([selectedCategory.id]));
+          formData.append('category_ids', selectedCategory.id.toString());
         }
       }
       
-      // 处理标签
+      // 处理标签 - 逐个附加
       if (values.tags && values.tags.length > 0) {
-        formData.append('tag_names', JSON.stringify(values.tags));
+        values.tags.forEach((tag: string) => {
+          formData.append('tag_names', tag);
+        });
       }
       
       // 处理图片
