@@ -8,6 +8,7 @@ import {
   UploadOutlined
 } from '@ant-design/icons';
 import { getCurrentUser, UserProfile } from '../services/authService';
+import { createPost, updatePost, getPostById } from '../services/postService';
 import type { UploadFile } from 'antd/es/upload/interface';
 
 const { TextArea } = Input;
@@ -89,13 +90,76 @@ const CreatePost: React.FC = () => {
 
     setLoading(true);
     try {
-      // TODO: 实现提交文章的逻辑
-      console.log('提交的文章数据:', values);
-      message.success('文章已保存！');
-      navigate('/');
+      // 准备提交的数据
+      const formData = new FormData();
+      formData.append('title', values.title);
+      formData.append('content', values.content);
+      formData.append('excerpt', values.description);
+      formData.append('status', 'published'); // 直接发布
+      
+      // 处理分类 - 将分类名称转换为数字ID
+      const categoryMap: { [key: string]: number } = {
+        'tech': 1,
+        'life': 2,
+        'travel': 3,
+        'thoughts': 4,
+        'tutorials': 5
+      };
+      
+      if (values.category && categoryMap[values.category]) {
+        formData.append('category_ids', JSON.stringify([categoryMap[values.category]]));
+      }
+      
+      // 处理标签
+      if (values.tags && values.tags.length > 0) {
+        formData.append('tag_names', JSON.stringify(values.tags));
+      }
+      
+      // 处理图片
+      if (values.image && values.image.length > 0) {
+        const imageFile = values.image[0];
+        if (imageFile.originFileObj) {
+          formData.append('featured_image', imageFile.originFileObj);
+        }
+      }
+
+      let result;
+      if (isEditing && id) {
+        result = await updatePost(id, formData);
+        message.success('文章更新成功！');
+      } else {
+        result = await createPost(formData);
+        message.success('文章发布成功！');
+      }
+      
+      console.log('文章操作成功:', result);
+      navigate('/?tab=my-posts');
     } catch (error: any) {
       console.error('保存文章失败:', error);
-      message.error('保存失败，请重试');
+      
+      if (error.response) {
+        const errorData = error.response.data;
+        if (typeof errorData === 'string') {
+          message.error(`操作失败: ${errorData}`);
+        } else if (errorData.detail) {
+          message.error(`操作失败: ${errorData.detail}`);
+        } else if (errorData.error) {
+          message.error(`操作失败: ${errorData.error}`);
+        } else {
+          // 显示字段级别的错误
+          const errorMessages = [];
+          for (const [field, errors] of Object.entries(errorData)) {
+            if (Array.isArray(errors)) {
+              errorMessages.push(`${field}: ${errors.join(', ')}`);
+            } else {
+              errorMessages.push(`${field}: ${errors}`);
+            }
+          }
+          message.error(`操作失败: ${errorMessages.join('; ')}`);
+        }
+      } else {
+        message.error('网络错误，请检查网络连接');
+      }
     } finally {
       setLoading(false);
     }
@@ -103,12 +167,65 @@ const CreatePost: React.FC = () => {
 
   const saveDraft = async () => {
     try {
-      const values = await form.validateFields();
-      // TODO: 实现保存草稿的逻辑
-      console.log('保存草稿:', values);
+      const values = await form.validateFields(['title', 'content']); // 草稿只需要标题和内容
+      
+      // 准备草稿数据
+      const formData = new FormData();
+      formData.append('title', values.title);
+      formData.append('content', values.content || '');
+      formData.append('excerpt', values.description || '');
+      formData.append('status', 'draft'); // 保存为草稿
+      
+      // 处理分类
+      const categoryMap: { [key: string]: number } = {
+        'tech': 1,
+        'life': 2,
+        'travel': 3,
+        'thoughts': 4,
+        'tutorials': 5
+      };
+      
+      if (values.category && categoryMap[values.category]) {
+        formData.append('category_ids', JSON.stringify([categoryMap[values.category]]));
+      }
+      
+      // 处理标签
+      if (values.tags && values.tags.length > 0) {
+        formData.append('tag_names', JSON.stringify(values.tags));
+      }
+      
+      // 处理图片
+      if (values.image && values.image.length > 0) {
+        const imageFile = values.image[0];
+        if (imageFile.originFileObj) {
+          formData.append('featured_image', imageFile.originFileObj);
+        }
+      }
+
+      let result;
+      if (isEditing && id) {
+        result = await updatePost(id, formData);
+      } else {
+        result = await createPost(formData);
+      }
+      
+      console.log('草稿保存成功:', result);
       message.success('草稿已保存！');
-    } catch (info) {
-      console.log('表单验证失败:', info);
+    } catch (error: any) {
+      console.error('保存草稿失败:', error);
+      
+      if (error.response) {
+        const errorData = error.response.data;
+        if (typeof errorData === 'string') {
+          message.error(`保存失败: ${errorData}`);
+        } else if (errorData.detail) {
+          message.error(`保存失败: ${errorData.detail}`);
+        } else {
+          message.error('保存失败，请检查输入数据');
+        }
+      } else {
+        message.error('网络错误，请检查网络连接');
+      }
     }
   };
 

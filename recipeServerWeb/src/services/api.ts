@@ -175,7 +175,7 @@ export interface UserProfile {
 }
 
 // 根据环境提供不同的API基础URL
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1';
 
 // 安全地访问localStorage
 const safeStorage = {

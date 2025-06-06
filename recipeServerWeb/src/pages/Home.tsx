@@ -4,12 +4,11 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, Row, Col, Typography, Spin, Alert, Tag, Empty, Menu, Select, Space, Button, Tooltip, message } from 'antd';
 import { PlusOutlined, EditOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, FileOutlined, FileTextOutlined, AppstoreOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { AppDispatch, RootState } from '../store';
-import { fetchRecipes } from '../store/recipesSlice';
+import { fetchRecipes } from '../store/postsSlice';
 import { fetchDeviceModels } from '../store/deviceTypesSlice';
 import { logout, getCurrentUser, UserProfile } from '../services/authService';
 import { getPendingRecipes, reviewRecipe } from '../services/adminService';
-import { getMyRecipes } from '../services/recipeService';
-import { RecipeListResponse } from '../services/api';  
+import { getMyPosts, PostListResponse } from '../services/postService';  
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -96,7 +95,7 @@ const Home: React.FC = () => {
     setMyPostsError(null);
     
     try {
-      const response: RecipeListResponse = await getMyRecipes();
+      const response: PostListResponse = await getMyPosts();
       
       setMyPosts(response.results || []);
     } catch (error: any) {
@@ -229,7 +228,7 @@ const Home: React.FC = () => {
               title={post.title}
               hoverable
               onClick={() => handlePostClick(post.id, isMyPosts)}
-              cover={post.image && <img alt={post.title} src={post.image} />}
+              cover={post.featured_image && <img alt={post.title} src={post.featured_image} />}
               style={{ cursor: 'pointer' }}
               actions={isPendingReviews ? [
                 <Tooltip title="通过审核">
@@ -265,7 +264,7 @@ const Home: React.FC = () => {
                 </Button>
               ] : []}
             >
-              <p>{post.description}</p>
+              <p>{post.excerpt}</p>
               <p>
                 <Text type="secondary">作者: {post.author.username}</Text>
               </p>

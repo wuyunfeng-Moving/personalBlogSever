@@ -37,6 +37,22 @@ personalBlogSever/
 - 修改 `Home.tsx` 为博客文章管理界面
 - 更新 `App.tsx` 导航和路由配置
 
+### 2024-01-XX - 认证系统实现
+- **添加完整的用户认证功能**
+- 安装并配置 `djangorestframework-simplejwt` 用于JWT认证
+- 创建认证API视图 (`auth_views.py`)：
+  - `RegisterView` - 用户注册接口
+  - `LoginView` - 用户登录接口  
+  - `UserProfileView` - 用户信息获取/更新接口
+  - `refresh_token_view` - JWT令牌刷新接口
+- 添加认证相关的URL路由：
+  - `/api/v1/auth/register/` - 用户注册
+  - `/api/v1/auth/token/` - 用户登录
+  - `/api/v1/auth/refresh/` - 刷新令牌
+  - `/api/v1/auth/profile/` - 用户信息
+- 配置Django REST Framework和JWT设置
+- 创建认证API测试脚本 (`test_auth_api.js`)
+
 ### 2024-01-XX - API 服务重构
 - **前端 API 服务完全重构** (services/api.ts)
 - 移除所有菜谱相关接口和数据类型
