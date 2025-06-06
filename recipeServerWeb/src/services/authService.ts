@@ -55,26 +55,35 @@ export const fetchUserProfile = async (): Promise<UserProfile | null> => {
 
 export const getCurrentUser = async (): Promise<(UserProfile & { access: string }) | null> => {
   try {
-    // 先检查是否有存储的用户配置文件
-    const profileStr = safeStorage.getItem('userProfile');
     const userStr = safeStorage.getItem('user');
-    
-    if (!userStr) return null;
+    if (!userStr) {
+      return null;
+    }
+
     const userData = JSON.parse(userStr);
-    
-    // 如果已有配置文件，直接返回
+    if (!userData || !userData.access) {
+      return null;
+    }
+
+    const profileStr = safeStorage.getItem('userProfile');
     if (profileStr) {
-      const profile = JSON.parse(profileStr);
+      const profileData = JSON.parse(profileStr);
+      return { ...profileData, access: userData.access };
+    }
+
+    // If profile is not in storage, fetch it
+    const profile = await fetchUserProfile();
+    if (profile) {
       return { ...profile, access: userData.access };
     }
     
-    // 否则从API获取
-    const profile = await fetchUserProfile();
-    if (!profile) return null;
-    
-    return { ...profile, access: userData.access };
+    return null;
+
   } catch (error) {
-    console.warn('Failed to get user data:', error);
+    console.warn('获取当前用户失败或用户数据损坏:', error);
+    // If there's any error, treat as not logged in
+    safeStorage.removeItem('user');
+    safeStorage.removeItem('userProfile');
     return null;
   }
 }; 

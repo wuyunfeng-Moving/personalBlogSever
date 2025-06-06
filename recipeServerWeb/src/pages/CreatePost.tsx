@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Form, Input, Button, Select, Card, message, Space, Upload, Typography, Modal } from 'antd';
+import { Form, Input, Button, Select, Card, message, Space, Upload, Typography, Modal, Spin } from 'antd';
 import { 
   SaveOutlined, 
   SendOutlined,
@@ -10,40 +10,22 @@ import {
 import { getCurrentUser, UserProfile } from '../services/authService';
 import { createPost, updatePost, getPostById, getCategories } from '../services/postService';
 import type { UploadFile } from 'antd/es/upload/interface';
-import { Category } from '../services/api';
+import { Category, BlogPost } from '../services/api';
+import LocationPicker from '../components/LocationPicker';
 
 const { TextArea } = Input;
 const { Option } = Select;
 
-
-
-// Post类型定义
-interface Post {
-  id: number;
-  title: string;
-  description: string;
-  content: string;
-  category: string;
-  tags?: string[] | string;
-  status: 'draft' | 'pending' | 'published' | 'rejected';
-  author: {
-    id: number;
-    username: string;
-  };
-  created_at: string;
-  updated_at: string;
-  image?: string;
-}
-
 const CreatePost: React.FC = () => {
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
+  const { id, slug } = useParams<{ id?: string; slug?: string }>();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<(UserProfile & { access: string }) | null>(null);
-  const [post, setPost] = useState<Post | null>(null);
+  const [post, setPost] = useState<BlogPost | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [loadingPost, setLoadingPost] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -75,11 +57,51 @@ const CreatePost: React.FC = () => {
     loadUser();
     loadCategories();
     
-    if (id) {
+    // 如果有id或slug，则为编辑模式
+    const postIdentifier = slug || id;
+    if (postIdentifier) {
       setIsEditing(true);
-      // TODO: 实现获取文章数据的逻辑
+      loadPostData(postIdentifier);
     }
-  }, [navigate, id]);
+  }, [navigate, id, slug]);
+
+  const loadPostData = async (identifier: string) => {
+    setLoadingPost(true);
+    try {
+      console.log('加载文章数据:', identifier);
+      const postData = await getPostById(identifier);
+      console.log('获取到的文章数据:', postData);
+      
+      setPost(postData);
+      
+      // 填充表单数据
+      const formData: any = {
+        title: postData.title,
+        content: postData.content,
+        description: postData.excerpt,
+        category: postData.categories && postData.categories.length > 0 ? postData.categories[0].slug : undefined,
+        tags: postData.tags ? postData.tags.map((tag: any) => tag.name) : [],
+      };
+
+      // 添加地理位置信息
+      if (postData.latitude && postData.longitude) {
+        formData.location = {
+          lat: postData.latitude,
+          lng: postData.longitude,
+          name: postData.location_name || ''
+        };
+      }
+
+      console.log('设置表单数据:', formData);
+      form.setFieldsValue(formData);
+      
+    } catch (error: any) {
+      console.error('加载文章数据失败:', error);
+      message.error('加载文章数据失败: ' + (error.response?.data?.detail || error.message));
+    } finally {
+      setLoadingPost(false);
+    }
+  };
 
   const normFile = (e: any) => {
     if (Array.isArray(e)) {
@@ -118,6 +140,13 @@ const CreatePost: React.FC = () => {
         });
       }
       
+      // 处理地理位置
+      if (values.location) {
+        formData.append('latitude', values.location.lat);
+        formData.append('longitude', values.location.lng);
+        formData.append('location_name', values.location.name);
+      }
+      
       // 处理图片
       if (values.image && values.image.length > 0) {
         const imageFile = values.image[0];
@@ -127,8 +156,9 @@ const CreatePost: React.FC = () => {
       }
 
       let result;
-      if (isEditing && id) {
-        result = await updatePost(id, formData);
+      if (isEditing && (slug || id)) {
+        const identifier = slug || id;
+        result = await updatePost(identifier!, formData);
         message.success('文章更新成功！');
       } else {
         result = await createPost(formData);
@@ -242,16 +272,27 @@ const CreatePost: React.FC = () => {
 
   const saveDraft = async () => {
     try {
-      const values = await form.validateFields(['title', 'content']); // 草稿只需要标题和内容
+      // 验证并获取所有相关字段的值，而不仅仅是title和content
+      const values = await form.getFieldsValue(['title', 'content', 'description', 'category', 'tags', 'location', 'image']);
       
+      // 至少需要一个标题才能保存草稿
+      if (!values.title) {
+        message.warning('请输入文章标题以保存草稿。');
+        form.validateFields(['title']); // 触发标题字段的验证提示
+        return;
+      }
+
+      setLoading(true);
+
       // 准备草稿数据
       const formData = new FormData();
       formData.append('title', values.title);
       formData.append('content', values.content || '');
+      // 现在可以正确获取摘要了
       formData.append('excerpt', values.description || '');
       formData.append('status', 'draft'); // 保存为草稿
       
-      // 处理分类 - 逐个附加
+      // 处理分类
       if (values.category) {
         const selectedCategory = categories.find(cat => cat.slug === values.category);
         if (selectedCategory) {
@@ -259,11 +300,18 @@ const CreatePost: React.FC = () => {
         }
       }
       
-      // 处理标签 - 逐个附加
+      // 处理标签
       if (values.tags && values.tags.length > 0) {
         values.tags.forEach((tag: string) => {
           formData.append('tag_names', tag);
         });
+      }
+      
+      // 处理地理位置
+      if (values.location) {
+        formData.append('latitude', values.location.lat);
+        formData.append('longitude', values.location.lng);
+        formData.append('location_name', values.location.name);
       }
       
       // 处理图片
@@ -275,8 +323,9 @@ const CreatePost: React.FC = () => {
       }
 
       let result;
-      if (isEditing && id) {
-        result = await updatePost(id, formData);
+      if (isEditing && (slug || id)) {
+        const identifier = slug || id;
+        result = await updatePost(identifier!, formData);
       } else {
         result = await createPost(formData);
       }
@@ -298,13 +347,23 @@ const CreatePost: React.FC = () => {
       } else {
         message.error('网络错误，请检查网络连接');
       }
+    } finally {
+      setLoading(false);
     }
   };
+
+  if (loadingPost) {
+    return (
+      <div style={{ maxWidth: 800, margin: '0 auto', padding: '24px', textAlign: 'center' }}>
+        <Spin size="large" tip="加载文章数据中..." />
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: 800, margin: '0 auto', padding: '24px' }}>
       <Card 
-        title={isEditing ? "编辑文章" : "创建新文章"} 
+        title={isEditing ? `编辑文章${post ? ` - ${post.title}` : ''}` : "创建新文章"} 
         bordered={false}
         extra={
           <Space>
@@ -375,6 +434,13 @@ const CreatePost: React.FC = () => {
               <Option value="React">React</Option>
               <Option value="Python">Python</Option>
             </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="location"
+            label="地理位置"
+          >
+            <LocationPicker />
           </Form.Item>
 
           <Form.Item

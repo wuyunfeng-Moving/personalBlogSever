@@ -27,6 +27,12 @@ export interface BlogPost {
   is_featured: boolean;
   allow_comments: boolean;
   status: 'draft' | 'pending' | 'published' | 'rejected';
+  
+  // 地理位置字段
+  latitude?: number;
+  longitude?: number;
+  location_name?: string;
+  
   meta_title?: string;
   meta_description?: string;
   meta_keywords?: string;
@@ -417,6 +423,12 @@ const api = {
   // 删除文章（需要认证）
   deletePost: async (slug: string): Promise<void> => {
     await apiClient.delete(`/posts/${slug}/`);
+  },
+
+  // 获取文章历史记录
+  getPostHistory: async (slug: string): Promise<any> => { // 返回类型可以更具体
+    const response = await apiClient.get(`/posts/${slug}/history/`);
+    return response.data;
   },
 
   // ========== 分类相关接口 ==========

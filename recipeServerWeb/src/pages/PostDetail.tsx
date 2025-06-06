@@ -12,7 +12,7 @@ const PostDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
-  const { currentPost, loading, error } = useSelector((state: RootState) => state.recipes);
+  const { currentPost, loading, error } = useSelector((state: RootState) => state.posts);
 
   useEffect(() => {
     if (slug) {

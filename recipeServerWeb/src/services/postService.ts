@@ -1,7 +1,23 @@
-import api, { PaginatedResponse, BlogPost, BlogPostFormData } from './api';
+import api, { PaginatedResponse, BlogPost, BlogPostFormData, Category } from './api';
 
 // 重新导出类型以保持兼容性
-export type { BlogPostFormData };
+export type { BlogPostFormData, Category };
+
+// 文章历史记录接口
+export interface PostHistory {
+  history_id: number;
+  history_date: string;
+  history_type: '+' | '~' | '-';
+  history_type_display: string;
+  history_user: {
+    id: number;
+    username: string;
+  };
+  id: number;
+  title: string;
+  content: string;
+  status: string;
+}
 
 // 博客文章响应类型（兼容旧的RecipeListResponse）
 export interface PostListResponse {
@@ -53,6 +69,12 @@ export const updatePost = async (slug: string, data: BlogPostFormData | FormData
 // 删除文章
 export const deletePost = async (slug: string) => {
   return api.deletePost(slug);
+};
+
+// 获取文章历史记录
+export const getPostHistory = async (slug:string): Promise<PostHistory[]> => {
+  const response = await api.getPostHistory(slug);
+  return response;
 };
 
 // 获取置顶文章

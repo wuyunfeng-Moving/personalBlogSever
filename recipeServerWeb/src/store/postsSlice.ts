@@ -68,8 +68,4 @@ const postsSlice = createSlice({
   },
 });
 
-// 兼容性导出
-export const fetchRecipes = fetchPosts;
-export const fetchRecipeDetail = fetchPostDetail;
-
 export default postsSlice.reducer; 

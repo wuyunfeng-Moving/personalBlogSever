@@ -54,11 +54,7 @@ const Login: React.FC = () => {
             </Button>
           </Form.Item>
 
-          <Form.Item>
-            <Button type="link" onClick={() => navigate('/register')} block>
-              没有账号？立即注册
-            </Button>
-          </Form.Item>
+          {/* 注册功能已暂时关闭 */}
         </Form>
       </Card>
     </div>

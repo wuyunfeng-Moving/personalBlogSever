@@ -20,12 +20,47 @@
 *   **主要用途**: 此 API 设计用于第三方应用程序、移动App或RSS阅读器与个人博客系统交互。
 *   **内容访问**: API主要提供博客文章、分类、标签等内容的读取访问。
 *   **状态过滤**: API 返回的文章数据**仅包含已发布**（状态为 `published`）的内容。
+*   **文章管理**: 支持完整的文章CRUD操作（创建、读取、更新、删除），需要适当的认证权限。
+*   **历史记录**: 提供文章编辑历史追踪功能，记录所有修改操作。
+*   **权限控制**: 文章的编辑和删除操作仅限于文章作者和系统管理员。
 
 ## 1. 认证
 
-*   大部分读取接口不需要认证，公开访问。
-*   评论提交等写入操作可能需要基本的验证（如验证码、邮箱验证等）。
-*   管理后台操作需要管理员认证（Session-based 或 Token）。
+*   **公开访问**: 大部分读取接口（文章列表、文章详情、分类、标签等）不需要认证，公开访问。
+*   **JWT Token认证**: 文章管理操作（创建、编辑、删除）需要JWT Token认证。
+*   **权限验证**: 文章的编辑和删除操作会验证用户权限（仅作者和管理员可操作）。
+
+### 1.1 获取认证Token
+
+#### POST `/api/v1/auth/token/`
+
+*   **描述:** 用户登录获取JWT访问令牌。
+*   **请求体:**
+    ```json
+    {
+        "username": "your_username",
+        "password": "your_password"
+    }
+    ```
+*   **成功响应 (200 OK):**
+    ```json
+    {
+        "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+        "refresh": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+        "user": {
+            "id": 1,
+            "username": "blogger",
+            "email": "blogger@example.com"
+        }
+    }
+    ```
+
+### 1.2 使用Token
+
+在需要认证的请求中，在HTTP头部添加：
+```
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...
+```
 
 ## 2. 基础 URL
 
@@ -203,6 +238,184 @@
         ]
     }
     ```
+
+#### POST `/api/v1/posts/`
+
+*   **描述:** 创建新的博客文章。需要用户认证。
+*   **认证:** 需要JWT Token认证
+*   **请求体:**
+    ```json
+    {
+        "title": "新文章标题",
+        "content": "文章内容（支持Markdown）",
+        "excerpt": "文章摘要",
+        "status": "draft", // 'draft' 或 'published'
+        "category_ids": [1, 2],
+        "tag_names": ["Python", "Django"],
+        "is_featured": false,
+        "allow_comments": true,
+        "meta_title": "SEO标题",
+        "meta_description": "SEO描述",
+        "meta_keywords": "关键词1,关键词2"
+    }
+    ```
+*   **成功响应 (201 Created):**
+    ```json
+    {
+        "id": 10,
+        "title": "新文章标题",
+        "slug": "new-article-title",
+        "content": "文章内容（支持Markdown）",
+        "excerpt": "文章摘要",
+        "status": "draft",
+        "author": {
+            "id": 1,
+            "username": "blogger",
+            "display_name": "技术博主"
+        },
+        "categories": [
+            {
+                "id": 1,
+                "name": "Python编程",
+                "slug": "python-programming"
+            }
+        ],
+        "tags": [
+            {
+                "id": 1,
+                "name": "Python",
+                "slug": "python"
+            }
+        ],
+        "created_at": "2023-12-01T10:30:00Z",
+        "updated_at": "2023-12-01T10:30:00Z"
+    }
+    ```
+*   **错误响应:**
+    *   `401 Unauthorized`: 未认证或Token无效。
+    *   `400 Bad Request`: 请求数据格式错误或必填字段缺失。
+
+#### PUT `/api/v1/posts/{slug}/`
+
+*   **描述:** 更新指定文章的完整信息。只有文章作者和管理员可以操作。
+*   **认证:** 需要JWT Token认证
+*   **路径参数:**
+    *   `slug` (必填): `string`, 文章的唯一URL标识符。
+*   **请求体:** 与创建文章相同的JSON格式
+*   **成功响应 (200 OK):** 返回更新后的文章完整信息
+*   **错误响应:**
+    *   `401 Unauthorized`: 未认证或Token无效。
+    *   `403 Forbidden`: 没有权限编辑此文章。
+    *   `404 Not Found`: 文章不存在。
+
+#### PATCH `/api/v1/posts/{slug}/`
+
+*   **描述:** 部分更新指定文章信息。只有文章作者和管理员可以操作。
+*   **认证:** 需要JWT Token认证
+*   **路径参数:**
+    *   `slug` (必填): `string`, 文章的唯一URL标识符。
+*   **请求体:** 只需包含要更新的字段
+    ```json
+    {
+        "title": "更新后的标题",
+        "status": "published"
+    }
+    ```
+*   **成功响应 (200 OK):** 返回更新后的文章完整信息
+*   **错误响应:**
+    *   `401 Unauthorized`: 未认证或Token无效。
+    *   `403 Forbidden`: 没有权限编辑此文章。
+    *   `404 Not Found`: 文章不存在。
+
+#### DELETE `/api/v1/posts/{slug}/`
+
+*   **描述:** 删除指定文章。只有文章作者和管理员可以操作。
+*   **认证:** 需要JWT Token认证
+*   **路径参数:**
+    *   `slug` (必填): `string`, 文章的唯一URL标识符。
+*   **成功响应 (204 No Content):** 文章删除成功，无返回内容
+*   **错误响应:**
+    *   `401 Unauthorized`: 未认证或Token无效。
+    *   `403 Forbidden`: 没有权限删除此文章。
+    *   `404 Not Found`: 文章不存在。
+
+#### GET `/api/v1/posts/{slug}/history/`
+
+*   **描述:** 获取指定文章的编辑历史记录。只有文章作者和管理员可以查看。
+*   **认证:** 需要JWT Token认证
+*   **路径参数:**
+    *   `slug` (必填): `string`, 文章的唯一URL标识符。
+*   **成功响应 (200 OK):**
+    ```json
+    [
+        {
+            "history_id": 15,
+            "history_date": "2023-12-01T14:30:00Z",
+            "history_type": "+",
+            "history_type_display": "Created",
+            "history_user": {
+                "id": 1,
+                "username": "blogger",
+                "display_name": "技术博主"
+            },
+            "id": 10,
+            "title": "文章标题",
+            "content": "文章内容...",
+            "status": "draft"
+        },
+        {
+            "history_id": 16,
+            "history_date": "2023-12-01T15:45:00Z",
+            "history_type": "~",
+            "history_type_display": "Changed",
+            "history_user": {
+                "id": 1,
+                "username": "blogger",
+                "display_name": "技术博主"
+            },
+            "id": 10,
+            "title": "更新后的文章标题",
+            "content": "更新后的文章内容...",
+            "status": "published"
+        }
+    ]
+    ```
+*   **错误响应:**
+    *   `401 Unauthorized`: 未认证或Token无效。
+    *   `403 Forbidden`: 没有权限查看此文章的历史记录。
+    *   `404 Not Found`: 文章不存在。
+
+#### GET `/api/v1/posts/my/`
+
+*   **描述:** 获取当前用户的文章列表（包括草稿和已发布的文章）。
+*   **认证:** 需要JWT Token认证
+*   **请求参数:**
+    *   `page` (查询参数, 可选): `integer`, 页码。
+    *   `page_size` (查询参数, 可选): `integer`, 每页数量。
+    *   `status` (查询参数, 可选): `string`, 按状态筛选 ('draft', 'published')。
+*   **成功响应 (200 OK):**
+    ```json
+    {
+        "count": 8,
+        "next": null,
+        "previous": null,
+        "results": [
+            {
+                "id": 10,
+                "title": "我的文章标题",
+                "slug": "my-article-title",
+                "excerpt": "文章摘要",
+                "status": "published",
+                "created_at": "2023-12-01T10:30:00Z",
+                "updated_at": "2023-12-01T15:45:00Z",
+                "view_count": 25
+            }
+            // ... 其他文章
+        ]
+    }
+    ```
+*   **错误响应:**
+    *   `401 Unauthorized`: 未认证或Token无效。
 
 ### 3.2 分类 (Categories)
 

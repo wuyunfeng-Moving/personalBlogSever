@@ -20,11 +20,9 @@ INSTALLED_APPS = [
     'drf_spectacular',
 
     # Local apps
-    'recipes.apps.RecipesConfig',
     'api.apps.ApiConfig',
-    'web.apps.WebConfig',
-    'recipe_site.apps.RecipeSiteConfig',
     'blog.apps.BlogConfig',
+    'users.apps.UsersConfig',
 ]
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',

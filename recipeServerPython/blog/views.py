@@ -1,6 +1,6 @@
 from django.shortcuts import render
-from rest_framework import generics, permissions, status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework import generics, permissions, status, viewsets
+from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from django.shortcuts import get_object_or_404
@@ -10,89 +10,47 @@ from drf_spectacular.types import OpenApiTypes
 from .models import BlogPost, Category, Tag, Comment
 from .serializers import (
     BlogPostSerializer, BlogPostListSerializer, 
-    CategorySerializer, TagSerializer, CommentSerializer
+    CategorySerializer, TagSerializer, CommentSerializer,
+    HistoricalBlogPostSerializer
 )
 
 # Create your views here.
 
-@extend_schema(
-    tags=['文章'],
-    operation_id='list_posts',
-    summary='获取文章列表',
-    description='获取博客文章列表，支持分页、筛选和搜索功能',
-    parameters=[
-        OpenApiParameter(
-            name='category',
-            type=OpenApiTypes.STR,
-            location=OpenApiParameter.QUERY,
-            description='按分类slug筛选文章',
-            examples=[
-                OpenApiExample('技术文章', value='tech'),
-                OpenApiExample('生活文章', value='life'),
-            ]
-        ),
-        OpenApiParameter(
-            name='tag',
-            type=OpenApiTypes.STR,
-            location=OpenApiParameter.QUERY,
-            description='按标签slug筛选文章',
-            examples=[
-                OpenApiExample('Python', value='python'),
-                OpenApiExample('Django', value='django'),
-            ]
-        ),
-        OpenApiParameter(
-            name='search',
-            type=OpenApiTypes.STR,
-            location=OpenApiParameter.QUERY,
-            description='在文章标题、内容和摘要中搜索关键词'
-        ),
-        OpenApiParameter(
-            name='author',
-            type=OpenApiTypes.STR,
-            location=OpenApiParameter.QUERY,
-            description='按作者用户名筛选文章'
-        ),
-        OpenApiParameter(
-            name='page',
-            type=OpenApiTypes.INT,
-            location=OpenApiParameter.QUERY,
-            description='页码，默认为1'
-        ),
-        OpenApiParameter(
-            name='page_size',
-            type=OpenApiTypes.INT,
-            location=OpenApiParameter.QUERY,
-            description='每页数量，默认为10'
-        ),
-    ]
-)
-class BlogPostListCreateView(generics.ListCreateAPIView):
-    """博客文章列表和创建"""
-    permission_classes = [IsAuthenticatedOrReadOnly]
-    
+class BlogPostViewSet(viewsets.ModelViewSet):
+    """
+    一个用于博客文章的视图集，提供 `list`, `create`, `retrieve`, `update`,
+    `partial_update`, `destroy` 和 `history` 动作。
+    """
+    lookup_field = 'slug'
+
     def get_serializer_class(self):
-        if self.request.method == 'GET':
+        if self.action == 'list':
             return BlogPostListSerializer
+        if self.action == 'history':
+            return HistoricalBlogPostSerializer
         return BlogPostSerializer
-    
+
     def get_queryset(self):
         queryset = BlogPost.objects.select_related('author').prefetch_related('categories', 'tags')
         
-        # 根据用户权限过滤
-        if self.request.user.is_authenticated and self.request.user.is_staff:
-            # 管理员可以看到所有文章
-            pass
-        elif self.request.user.is_authenticated:
-            # 普通用户只能看到已发布的文章和自己的文章
-            queryset = queryset.filter(
-                Q(status='published') | Q(author=self.request.user)
-            )
-        else:
-            # 未登录用户只能看到已发布的文章
-            queryset = queryset.filter(status='published')
-        
-        # 按参数过滤
+        # for list view, filter based on user
+        if self.action == 'list':
+            author_param = self.request.query_params.get('author')
+
+            # 如果用户正在使用`author=me`参数请求自己的文章，则暂时不按状态过滤，
+            # 以便他们可以看到自己的草稿。后续的作者过滤器会处理这个问题。
+            if self.request.user.is_authenticated and author_param == 'me':
+                pass
+            
+            # 如果用户是管理员并且没有按特定作者筛选，则他们可以看到所有文章。
+            elif self.request.user.is_authenticated and self.request.user.is_staff and not author_param:
+                pass
+            
+            # 对于所有其他情况（游客、普通登录用户浏览"全部文章"列表），只显示已发布的文章。
+            else:
+                queryset = queryset.filter(status='published')
+
+        # filter by query params
         category = self.request.query_params.get('category')
         if category:
             queryset = queryset.filter(categories__slug=category)
@@ -100,7 +58,7 @@ class BlogPostListCreateView(generics.ListCreateAPIView):
         tag = self.request.query_params.get('tag')
         if tag:
             queryset = queryset.filter(tags__slug=tag)
-        
+            
         search = self.request.query_params.get('search')
         if search:
             queryset = queryset.filter(
@@ -108,83 +66,141 @@ class BlogPostListCreateView(generics.ListCreateAPIView):
                 Q(content__icontains=search) |
                 Q(excerpt__icontains=search)
             )
-        
+
         author = self.request.query_params.get('author')
         if author:
-            queryset = queryset.filter(author__username=author)
-        
-        return queryset.distinct()
-    
+            # allow 'me' for current user
+            if author == 'me' and self.request.user.is_authenticated:
+                queryset = queryset.filter(author=self.request.user)
+            else:
+                queryset = queryset.filter(author__username=author)
+
+        return queryset.distinct().order_by('-published_at', '-created_at')
+
+    def get_permissions(self):
+        """根据操作设置权限"""
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [permissions.IsAuthenticated()]
+        return [permissions.AllowAny()]
+
+    @extend_schema(
+        tags=['文章'],
+        operation_id='list_posts',
+        summary='获取文章列表',
+        description='获取博客文章列表，支持分页、筛选和搜索功能',
+        parameters=[
+            OpenApiParameter(
+                name='category',
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description='按分类slug筛选文章'
+            ),
+            OpenApiParameter(
+                name='tag',
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description='按标签slug筛选文章'
+            ),
+            OpenApiParameter(
+                name='search',
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description='在文章标题、内容和摘要中搜索关键词'
+            ),
+            OpenApiParameter(
+                name='author',
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description='按作者用户名筛选文章，可使用"me"表示当前用户'
+            ),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
     @extend_schema(
         tags=['文章'],
         operation_id='create_post',
         summary='创建文章',
-        description='创建新的博客文章，需要登录认证',
-        examples=[
-            OpenApiExample(
-                name='创建文章示例',
-                value={
-                    "title": "我的新文章",
-                    "content": "这是文章的内容...",
-                    "excerpt": "这是文章的摘要",
-                    "status": "published",
-                    "category_ids": [1, 2],
-                    "tag_names": ["Python", "Django"],
-                    "is_featured": False,
-                    "allow_comments": True
-                }
-            )
-        ]
+        description='创建新的博客文章，需要登录认证'
     )
     def create(self, request, *args, **kwargs):
         return super().create(request, *args, **kwargs)
-    
+
+    @extend_schema(
+        tags=['文章'],
+        operation_id='retrieve_post',
+        summary='获取文章详情',
+        description='根据slug获取单篇文章的详细信息'
+    )
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
+
+    @extend_schema(
+        tags=['文章'],
+        operation_id='update_post',
+        summary='更新文章',
+        description='更新文章信息，只有作者和管理员可以操作'
+    )
+    def update(self, request, *args, **kwargs):
+        return super().update(request, *args, **kwargs)
+
+    @extend_schema(
+        tags=['文章'],
+        operation_id='partial_update_post',
+        summary='部分更新文章',
+        description='部分更新文章信息，只有作者和管理员可以操作'
+    )
+    def partial_update(self, request, *args, **kwargs):
+        return super().partial_update(request, *args, **kwargs)
+
+    @extend_schema(
+        tags=['文章'],
+        operation_id='delete_post',
+        summary='删除文章',
+        description='删除文章，只有作者和管理员可以操作'
+    )
+    def destroy(self, request, *args, **kwargs):
+        return super().destroy(request, *args, **kwargs)
+
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
-@extend_schema(tags=['文章'], operation_id='post_detail')
-class BlogPostDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """博客文章详情、更新和删除"""
-    serializer_class = BlogPostSerializer
-    lookup_field = 'slug'
-    
-    def get_queryset(self):
-        queryset = BlogPost.objects.select_related('author').prefetch_related('categories', 'tags')
-        
-        # 根据用户权限过滤
-        if self.request.user.is_authenticated and self.request.user.is_staff:
-            # 管理员可以看到所有文章
-            return queryset
-        elif self.request.user.is_authenticated:
-            # 普通用户只能看到已发布的文章和自己的文章
-            return queryset.filter(
-                Q(status='published') | Q(author=self.request.user)
-            )
-        else:
-            # 未登录用户只能看到已发布的文章
-            return queryset.filter(status='published')
-    
-    def get_permissions(self):
-        """根据操作设置权限"""
-        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
-            # 只有作者或管理员可以编辑/删除
-            return [IsAuthenticated()]
-        return [permissions.AllowAny()]
-    
     def perform_update(self, serializer):
-        """只允许作者或管理员更新文章"""
         obj = self.get_object()
         if obj.author != self.request.user and not self.request.user.is_staff:
             from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("您只能编辑自己的文章")
+            raise PermissionDenied("您只能编辑自己的文章。")
         serializer.save()
-    
+
     def perform_destroy(self, instance):
-        """只允许作者或管理员删除文章"""
         if instance.author != self.request.user and not self.request.user.is_staff:
             from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("您只能删除自己的文章")
+            raise PermissionDenied("您只能删除自己的文章。")
         instance.delete()
+
+    @extend_schema(
+        tags=['文章'],
+        operation_id='post_history',
+        summary='获取文章历史记录',
+        description='获取文章的编辑历史记录，只有作者和管理员可以查看'
+    )
+    @action(detail=True, methods=['get'], url_path='history', permission_classes=[permissions.IsAuthenticated])
+    def history(self, request, slug=None):
+        """
+        获取一篇文章的历史版本记录。
+        只有文章作者和管理员可以查看。
+        """
+        post = self.get_object()
+        if post.author != request.user and not request.user.is_staff:
+            return Response(
+                {"detail": "您没有权限查看此文章的历史记录。"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        history = post.history.all()
+        serializer = self.get_serializer(history, many=True)
+        return Response(serializer.data)
 
 class MyPostsView(generics.ListAPIView):
     """我的文章列表"""

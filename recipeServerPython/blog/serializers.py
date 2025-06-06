@@ -45,6 +45,27 @@ class CommentSerializer(serializers.ModelSerializer):
             return CommentSerializer(obj.replies.filter(is_approved=True), many=True).data
         return []
 
+class HistoricalBlogPostSerializer(serializers.ModelSerializer):
+    history_user = AuthorSerializer(read_only=True)
+    history_type_display = serializers.SerializerMethodField()
+
+    class Meta:
+        model = BlogPost.history.model
+        fields = [
+            'history_id',
+            'history_date',
+            'history_type',
+            'history_type_display',
+            'history_user',
+            'id',
+            'title',
+            'content',
+            'status'
+        ]
+
+    def get_history_type_display(self, obj):
+        return obj.get_history_type_display()
+
 class BlogPostSerializer(serializers.ModelSerializer):
     """博客文章序列化器"""
     author = AuthorSerializer(read_only=True)
@@ -67,6 +88,7 @@ class BlogPostSerializer(serializers.ModelSerializer):
             'id', 'title', 'slug', 'excerpt', 'content', 'featured_image',
             'author', 'categories', 'tags', 'category_ids', 'tag_names',
             'status', 'is_featured', 'allow_comments', 'view_count',
+            'latitude', 'longitude', 'location_name',
             'created_at', 'updated_at', 'published_at',
             'meta_title', 'meta_description', 'meta_keywords'
         ]
@@ -132,5 +154,6 @@ class BlogPostListSerializer(serializers.ModelSerializer):
             'id', 'title', 'slug', 'excerpt', 'featured_image',
             'author', 'categories', 'tags',
             'status', 'is_featured', 'view_count',
+            'latitude', 'longitude', 'location_name',
             'created_at', 'updated_at', 'published_at'
         ] 

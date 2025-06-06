@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.utils.text import slugify
 from django.urls import reverse
 import uuid
+from simple_history.models import HistoricalRecords
 
 class Category(models.Model):
     """博客分类模型"""
@@ -114,6 +115,13 @@ class BlogPost(models.Model):
     meta_description = models.CharField('SEO描述', max_length=160, blank=True)
     meta_keywords = models.CharField('SEO关键词', max_length=100, blank=True)
     
+    # 地理位置相关字段
+    latitude = models.FloatField(blank=True, null=True, verbose_name='纬度')
+    longitude = models.FloatField(blank=True, null=True, verbose_name='经度')
+    location_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='位置名称')
+    
+    history = HistoricalRecords()
+
     class Meta:
         verbose_name = '博客文章'
         verbose_name_plural = '博客文章'

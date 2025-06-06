@@ -1,8 +1,10 @@
-Django>=4.0
-djangorestframework>=3.13
-psycopg2-binary>=2.9 # For PostgreSQL connection
+Django==5.0.6
+djangorestframework==3.15.1
+psycopg==3.1.18
 django-admin-log # Optional, for viewing logs in admin later
-Pillow>=9.0 # For ImageField support
-django-cors-headers>=3.13 # For CORS support
-djangorestframework-simplejwt>=5.0 # For JWT authentication
-drf-spectacular>=0.25.0 # For Swagger/OpenAPI documentation 
+Pillow==10.4.0 # For ImageField support
+django-cors-headers==4.3.1 # For CORS support
+djangorestframework-simplejwt==5.3.1 # For JWT authentication
+drf-spectacular>=0.25.0 # For Swagger/OpenAPI documentation
+django-filter==24.2
+django-simple-history==3.5.0 

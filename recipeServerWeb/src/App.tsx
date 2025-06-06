@@ -147,6 +147,14 @@ const App: React.FC = () => {
               } 
             />
             <Route 
+              path="/edit-post/:slug" 
+              element={
+                <PrivateRoute>
+                  <CreatePost />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
               path="/pending-reviews" 
               element={
                 <AdminRoute>
