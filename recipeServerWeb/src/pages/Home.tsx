@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Card, Row, Col, Typography, Spin, Alert, Tag, Empty, Menu, Select, Button, Tooltip, message, List, Modal } from 'antd';
+import { Card, Row, Col, Typography, Spin, Alert, Tag, Empty, Menu, Select, Button, Tooltip, message, Input, Space } from 'antd';
 import DebugHelper from '../components/DebugHelper';
-import { PlusOutlined, EditOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, FileOutlined, FileTextOutlined, AppstoreOutlined, GlobalOutlined, DeleteOutlined, HistoryOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, FileOutlined, FileTextOutlined, GlobalOutlined, DeleteOutlined, HistoryOutlined, SearchOutlined } from '@ant-design/icons';
 import { AppDispatch, RootState } from '../store';
 import { fetchPosts } from '../store/postsSlice';
 import { logout, getCurrentUser, UserProfile } from '../services/authService';
@@ -14,7 +14,7 @@ import DeleteConfirmModal from '../components/DeleteConfirmModal';
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-type MenuKey = 'map' | 'posts' | 'categories' | 'my-posts';
+type MenuKey = 'map' | 'posts' | 'my-posts';
 
 const statusColors: Record<string, string> = {
   draft: 'orange',
@@ -51,8 +51,10 @@ const Home: React.FC = () => {
   const [myPostsError, setMyPostsError] = useState<string | null>(null);
 
   const [categories, setCategories] = useState<Category[]>([]);
-  const [categoriesLoading, setCategoriesLoading] = useState(false);
-  const [categoriesError, setCategoriesError] = useState<string | null>(null);
+  
+  // 搜索和筛选状态
+  const [searchKeyword, setSearchKeyword] = useState<string>('');
+  const [filteredMyPosts, setFilteredMyPosts] = useState<any[]>([]);
   
   // 删除确认模态框状态
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
@@ -74,20 +76,41 @@ const Home: React.FC = () => {
   useEffect(() => {
     if (selectedKey === 'my-posts' && user) {
       fetchMyPosts();
-    } else if (selectedKey === 'categories') {
-      fetchCategories();
+      loadCategories();
     }
   }, [selectedKey, user]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tab = params.get('tab') as MenuKey | null;
-    if (tab && ['map', 'posts', 'categories', 'my-posts'].includes(tab)) {
+    if (tab && ['map', 'posts', 'my-posts'].includes(tab)) {
         if ((tab === 'my-posts' && user) || (tab !== 'my-posts')) {
             setSelectedKey(tab);
         }
     }
   }, [location.search, user]);
+
+  // 根据搜索关键词和分类筛选我的文章
+  useEffect(() => {
+    let filtered = myPosts;
+    
+    // 关键词搜索
+    if (searchKeyword.trim()) {
+      filtered = filtered.filter(post => 
+        post.title.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+        (post.content && post.content.toLowerCase().includes(searchKeyword.toLowerCase()))
+      );
+    }
+    
+    // 分类筛选
+    if (selectedCategory) {
+      filtered = filtered.filter(post => 
+        post.categories?.some((cat: Category) => cat.slug === selectedCategory)
+      );
+    }
+    
+    setFilteredMyPosts(filtered);
+  }, [myPosts, searchKeyword, selectedCategory]);
 
   const fetchMyPosts = async () => {
     if (!user) return;
@@ -103,16 +126,12 @@ const Home: React.FC = () => {
     }
   };
 
-  const fetchCategories = async () => {
-    setCategoriesLoading(true);
-    setCategoriesError(null);
+  const loadCategories = async () => {
     try {
-      const response = await getCategories(true); // include_count=true
+      const response = await getCategories(true);
       setCategories(response.results || []);
     } catch (error: any) {
-      setCategoriesError(error.response?.data?.error || '获取分类失败');
-    } finally {
-      setCategoriesLoading(false);
+      console.error('获取分类失败:', error);
     }
   };
 
@@ -289,29 +308,63 @@ const Home: React.FC = () => {
     );
   };
 
-  const renderCategoryList = () => {
-    if (categoriesLoading) return <div style={{ textAlign: 'center', padding: '40px 0' }}><Spin size="large" /></div>;
-    if (categoriesError) return <Alert message="错误" description={categoriesError} type="error" showIcon />;
-    if (!categories || categories.length === 0) return <Empty description="暂无分类" />;
-
+  const renderMyPostsWithSearch = () => {
     return (
-      <List
-        itemLayout="horizontal"
-        dataSource={categories}
-        renderItem={item => (
-          <List.Item
-            actions={[<Button type="link" onClick={() => handleCategoryChange(item.slug)}>查看该分类下的文章</Button>]}
-          >
-            <List.Item.Meta
-              title={<Text strong>{item.name}</Text>}
-              description={item.description || '暂无描述'}
-            />
-            <div>
-              <Tag color="blue">文章数: {item.post_count || 0}</Tag>
-            </div>
-          </List.Item>
-        )}
-      />
+      <div>
+        {/* 搜索和筛选区域 */}
+        <div style={{ marginBottom: '20px' }}>
+          <Row gutter={[16, 16]} align="middle">
+            <Col xs={24} sm={12} md={10}>
+              <Input.Search
+                placeholder="搜索文章标题或内容..."
+                allowClear
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                onSearch={(value) => setSearchKeyword(value)}
+                style={{ width: '100%' }}
+                enterButton
+              />
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Select
+                placeholder="按分类筛选"
+                allowClear
+                value={selectedCategory || undefined}
+                onChange={handleCategoryChange}
+                style={{ width: '100%' }}
+              >
+                <Option value="">全部分类</Option>
+                {categories.map((category) => (
+                  <Option key={category.slug} value={category.slug}>
+                    {category.name} ({category.post_count || 0})
+                  </Option>
+                ))}
+              </Select>
+            </Col>
+            <Col xs={24} md={6}>
+              <Space>
+                <Text type="secondary">
+                  共 {filteredMyPosts.length} 篇
+                </Text>
+                {(searchKeyword || selectedCategory) && (
+                  <Button 
+                    size="small" 
+                    onClick={() => {
+                      setSearchKeyword('');
+                      setSelectedCategory('');
+                    }}
+                  >
+                    清除筛选
+                  </Button>
+                )}
+              </Space>
+            </Col>
+          </Row>
+        </div>
+        
+        {/* 文章列表 */}
+        {renderPostList(filteredMyPosts, myPostsLoading, myPostsError, true)}
+      </div>
     );
   };
 
@@ -321,10 +374,8 @@ const Home: React.FC = () => {
         return <PostsMap />;
       case 'posts':
         return renderPostList();
-      case 'categories':
-        return renderCategoryList();
       case 'my-posts':
-        return renderPostList(myPosts, myPostsLoading, myPostsError, true);
+        return renderMyPostsWithSearch();
       default:
         return renderPostList();
     }
@@ -354,7 +405,6 @@ const Home: React.FC = () => {
                 { key: 'map', icon: <GlobalOutlined />, label: '地图视图', onClick: () => handleMenuClick('map') },
                 { key: 'posts', icon: <FileOutlined />, label: '全部文章', onClick: () => handleMenuClick('posts') },
                 user ? { key: 'my-posts', icon: <FileTextOutlined />, label: '我的文章', onClick: () => handleMenuClick('my-posts') } : null,
-                { key: 'categories', icon: <AppstoreOutlined />, label: '文章分类', onClick: () => handleMenuClick('categories') }
               ].filter(Boolean) as any}
             />
           </Card>
@@ -368,27 +418,7 @@ const Home: React.FC = () => {
                     {selectedKey === 'map' && '地图视图'}
                     {selectedKey === 'posts' && '全部文章'}
                     {selectedKey === 'my-posts' && '我的文章'}
-                    {selectedKey === 'categories' && '文章分类'}
                   </Title>
-                </Col>
-                <Col>
-                  {selectedKey === 'posts' && (
-                    <Select
-                      placeholder="按分类筛选"
-                      style={{ width: 200 }}
-                      allowClear
-                      onChange={handleCategoryChange}
-                      value={selectedCategory || undefined}
-                      loading={categoriesLoading}
-                    >
-                      <Option value="">全部分类</Option>
-                      {categories.map((category) => (
-                        <Option key={category.slug} value={category.slug}>
-                          {category.name}
-                        </Option>
-                      ))}
-                    </Select>
-                  )}
                 </Col>
               </Row>
             </div>

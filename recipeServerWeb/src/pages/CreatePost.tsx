@@ -78,7 +78,6 @@ const CreatePost: React.FC = () => {
       const formData: any = {
         title: postData.title,
         content: postData.content,
-        description: postData.excerpt,
         category: postData.categories && postData.categories.length > 0 ? postData.categories[0].slug : undefined,
         tags: postData.tags ? postData.tags.map((tag: any) => tag.name) : [],
       };
@@ -122,7 +121,6 @@ const CreatePost: React.FC = () => {
       const formData = new FormData();
       formData.append('title', values.title);
       formData.append('content', values.content);
-      formData.append('excerpt', values.description);
       formData.append('status', 'published'); // 直接发布
       
       // 处理分类 - 逐个附加
@@ -273,7 +271,7 @@ const CreatePost: React.FC = () => {
   const saveDraft = async () => {
     try {
       // 验证并获取所有相关字段的值，而不仅仅是title和content
-      const values = await form.getFieldsValue(['title', 'content', 'description', 'category', 'tags', 'location', 'image']);
+      const values = await form.getFieldsValue(['title', 'content', 'category', 'tags', 'location', 'image']);
       
       // 至少需要一个标题才能保存草稿
       if (!values.title) {
@@ -287,9 +285,7 @@ const CreatePost: React.FC = () => {
       // 准备草稿数据
       const formData = new FormData();
       formData.append('title', values.title);
-      formData.append('content', values.content || '');
-      // 现在可以正确获取摘要了
-      formData.append('excerpt', values.description || '');
+      formData.append('content', values.content);
       formData.append('status', 'draft'); // 保存为草稿
       
       // 处理分类
@@ -391,14 +387,6 @@ const CreatePost: React.FC = () => {
             rules={[{ required: true, message: '请输入文章标题' }]}
           >
             <Input placeholder="请输入文章标题" />
-          </Form.Item>
-
-          <Form.Item
-            name="description"
-            label="文章摘要"
-            rules={[{ required: true, message: '请输入文章摘要' }]}
-          >
-            <TextArea rows={3} placeholder="请输入文章摘要" />
           </Form.Item>
 
           <Form.Item

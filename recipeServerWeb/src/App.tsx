@@ -7,9 +7,9 @@ import Register from './pages/Register';
 import CreatePost from './pages/CreatePost';
 import { getCurrentUser, UserProfile } from './services/authService';
 import PostDetail from './pages/PostDetail';
+import PostDetailView from './pages/PostDetailView';
 import PendingReviews from './pages/PendingReviews';
-import LocationTest from './pages/LocationTest';
-import ModalTest from './pages/ModalTest';
+
 
 const { Header, Content } = Layout;
 
@@ -131,7 +131,7 @@ const App: React.FC = () => {
               }
             />
             <Route path="/" element={<Home />} />
-            <Route path="/posts/:slug" element={<PostDetail />} />
+            <Route path="/posts/:slug" element={<PostDetailView />} />
             <Route 
               path="/create-post" 
               element={
@@ -164,8 +164,7 @@ const App: React.FC = () => {
                 </AdminRoute>
               } 
             />
-            <Route path="/location-test" element={<LocationTest />} />
-            <Route path="/modal-test" element={<ModalTest />} />
+
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Content>
