@@ -12,6 +12,83 @@ const amapKey = '3cf371023e2316a73be7bacbf95c673f';
 // 生成组件唯一ID
 const generateInstanceId = () => Math.random().toString(36).substr(2, 9);
 
+// 标签颜色映射
+const getTagColors = () => {
+  const colors = [
+    '#f50', '#2db7f5', '#87d068', '#108ee9', '#722ed1',
+    '#eb2f96', '#52c41a', '#fa8c16', '#1890ff', '#13c2c2',
+    '#fa541c', '#faad14', '#a0d911', '#52c41a', '#13c2c2'
+  ];
+  return colors;
+};
+
+// 根据标签生成标记图标
+const createMarkerIcon = (post: BlogPost) => {
+  const tags = post.tags || [];
+  const colors = getTagColors();
+  
+  // 如果没有标签，使用默认图标
+  if (tags.length === 0) {
+    return `
+      <div style="
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, #1890ff, #096dd9);
+        border: 2px solid white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        cursor: pointer;
+      ">
+        <span style="color: white; font-size: 14px; font-weight: bold;">📝</span>
+      </div>
+    `;
+  }
+
+  // 取前3个标签用于显示
+  const displayTags = tags.slice(0, 3);
+  const tagElements = displayTags.map((tag, index) => {
+    const color = colors[index % colors.length];
+    return `
+      <div style="
+        background: ${color};
+        color: white;
+        padding: 1px 4px;
+        border-radius: 8px;
+        font-size: 8px;
+        white-space: nowrap;
+        max-width: 40px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 1px;
+        font-weight: 500;
+        text-align: center;
+      ">${tag.name}</div>
+    `;
+  }).join('');
+
+  return `
+    <div style="
+      min-width: 50px;
+      max-width: 80px;
+      background: white;
+      border: 2px solid #1890ff;
+      border-radius: 12px;
+      padding: 4px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    ">
+      ${tagElements}
+      ${tags.length > 3 ? `<div style="font-size: 8px; color: #666; margin-top: 1px;">+${tags.length - 3}</div>` : ''}
+    </div>
+  `;
+};
+
 const PostsMap: React.FC = () => {
   const instanceId = useRef(generateInstanceId());
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -224,24 +301,78 @@ const PostsMap: React.FC = () => {
                               typeof post.longitude === 'number' &&
                               !isNaN(post.latitude) && !isNaN(post.longitude);
 
-        addDebugInfo(`文章${index + 1}: "${post.title}" - 位置: ${hasValidCoords ? `[${post.longitude}, ${post.latitude}]` : '无'}`);
+        const tagNames = post.tags ? post.tags.map(tag => tag.name).join(', ') : '无标签';
+        addDebugInfo(`文章${index + 1}: "${post.title}" - 位置: ${hasValidCoords ? `[${post.longitude}, ${post.latitude}]` : '无'} - 标签: ${tagNames}`);
 
         if (hasValidCoords) {
           markerCount++;
           validPosts.push(post);
           
           try {
+            // 创建自定义HTML标记
+            const markerIcon = createMarkerIcon(post);
+            
             const marker = new map.Marker({
               position: new map.LngLat(post.longitude, post.latitude),
+              content: markerIcon,
               title: post.title,
             });
 
+            // 创建信息窗口内容，包含标签信息
+            const tagsHtml = post.tags && post.tags.length > 0 
+              ? post.tags.map(tag => `<span style="
+                  display: inline-block;
+                  background: #f0f0f0;
+                  color: #666;
+                  padding: 2px 6px;
+                  border-radius: 4px;
+                  font-size: 10px;
+                  margin: 1px;
+                ">${tag.name}</span>`).join('')
+              : '<span style="color: #999; font-size: 10px;">暂无标签</span>';
+
+            const categoriesHtml = post.categories && post.categories.length > 0
+              ? post.categories.map(category => `<span style="
+                  display: inline-block;
+                  background: #e6f7ff;
+                  color: #1890ff;
+                  padding: 2px 6px;
+                  border-radius: 4px;
+                  font-size: 10px;
+                  margin: 1px;
+                ">${category.name}</span>`).join('')
+              : '<span style="color: #999; font-size: 10px;">未分类</span>';
+
             const content = `
-              <div style="padding: 10px; max-width: 300px; font-family: 'Arial', sans-serif;">
-                <h4 style="margin: 0 0 5px 0; color: #333;">${post.title}</h4>
-                ${post.location_name ? `<p style="font-size: 11px; color: #999; margin: 0 0 5px 0;"><strong>📍 ${post.location_name}</strong></p>` : ''}
-                <p style="font-size: 12px; color: #666; margin: 0 0 8px 0;">${post.excerpt || '暂无摘要'}</p>
-                <a href="#" onclick="window.location.href='/posts/${post.slug}'" style="font-size: 12px; color: #1890ff; text-decoration: none; margin-top: 5px; display: inline-block;">阅读全文 →</a>
+              <div style="padding: 12px; max-width: 320px; font-family: 'Arial', sans-serif;">
+                <h4 style="margin: 0 0 8px 0; color: #333; font-size: 14px;">${post.title}</h4>
+                ${post.location_name ? `<p style="font-size: 11px; color: #999; margin: 0 0 8px 0;"><strong>📍 ${post.location_name}</strong></p>` : ''}
+                
+                <div style="margin: 6px 0;">
+                  <div style="font-size: 11px; color: #666; margin-bottom: 4px;">🏷️ 标签:</div>
+                  <div style="margin-bottom: 6px;">${tagsHtml}</div>
+                </div>
+                
+                <div style="margin: 6px 0;">
+                  <div style="font-size: 11px; color: #666; margin-bottom: 4px;">📂 分类:</div>
+                  <div style="margin-bottom: 8px;">${categoriesHtml}</div>
+                </div>
+                
+                <p style="font-size: 12px; color: #666; margin: 0 0 10px 0; line-height: 1.4;">${post.excerpt || '暂无摘要'}</p>
+                <a href="#" onclick="window.location.href='/posts/${post.slug}'" style="
+                  font-size: 12px; 
+                  color: #1890ff; 
+                  text-decoration: none; 
+                  margin-top: 8px; 
+                  display: inline-block;
+                  padding: 4px 8px;
+                  border: 1px solid #1890ff;
+                  border-radius: 4px;
+                  transition: all 0.2s;
+                " onmouseover="this.style.background='#1890ff'; this.style.color='white';" 
+                   onmouseout="this.style.background='transparent'; this.style.color='#1890ff';">
+                  阅读全文 →
+                </a>
               </div>
             `;
 
@@ -251,14 +382,14 @@ const PostsMap: React.FC = () => {
             });
 
             map.add(marker);
-            addDebugInfo(`标记添加成功: ${post.title}`);
+            addDebugInfo(`自定义标记添加成功: ${post.title} (标签: ${post.tags?.length || 0}个)`);
           } catch (markerError: any) {
             addDebugInfo(`创建标记失败: ${post.title} - ${markerError.message}`);
           }
         }
       });
       
-      addDebugInfo(`标记处理完成: 成功添加${markerCount}个标记`);
+      addDebugInfo(`标记处理完成: 成功添加${markerCount}个带标签样式的标记`);
 
       // 如果有标记，调整地图视野
       if (validPosts.length > 0) {
@@ -267,7 +398,7 @@ const PostsMap: React.FC = () => {
           validPosts.forEach(post => {
             bounds.extend(new map.LngLat(post.longitude!, post.latitude!));
           });
-          map.setBounds(bounds, false, [20, 20, 20, 20]);
+          map.setBounds(bounds, false, [30, 30, 30, 30]);
           addDebugInfo('地图视野调整成功');
         } catch (boundsError: any) {
           addDebugInfo(`调整视野失败: ${boundsError.message}`);
@@ -294,6 +425,11 @@ const PostsMap: React.FC = () => {
                         typeof post.longitude === 'number' &&
                         !isNaN(post.latitude) && !isNaN(post.longitude)) : [];
   const totalPosts = posts && Array.isArray(posts) ? posts.length : 0;
+  
+  // 统计标签信息
+  const allTags = posts && Array.isArray(posts) ? 
+    posts.flatMap(post => post.tags || []) : [];
+  const uniqueTags = Array.from(new Set(allTags.map(tag => tag.name))).length;
 
   return (
     <div>
@@ -304,6 +440,9 @@ const PostsMap: React.FC = () => {
         </Tag>
         <Tag color="green">
           有位置信息: {postsWithLocation.length}
+        </Tag>
+        <Tag color="purple">
+          标签总数: {uniqueTags}
         </Tag>
         <Tag color={postsLoading ? 'orange' : 'default'}>
           {postsLoading ? '数据加载中...' : '数据加载完成'}
@@ -323,12 +462,65 @@ const PostsMap: React.FC = () => {
         )}
       </div>
 
+      {/* 标签图例 */}
+      {postsWithLocation.length > 0 && (
+        <Card 
+          size="small" 
+          title="📍 地图图例" 
+          style={{ marginBottom: '16px' }}
+          bodyStyle={{ padding: '12px' }}
+        >
+          <div style={{ fontSize: '12px', color: '#666' }}>
+            <div style={{ marginBottom: '8px' }}>
+              <strong>标记样式说明：</strong>
+            </div>
+            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{
+                  width: '16px',
+                  height: '16px',
+                  background: 'linear-gradient(135deg, #1890ff, #096dd9)',
+                  border: '1px solid white',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <span style={{ color: 'white', fontSize: '8px' }}>📝</span>
+                </div>
+                <span>无标签文章</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{
+                  width: '24px',
+                  height: '20px',
+                  background: 'white',
+                  border: '1px solid #1890ff',
+                  borderRadius: '6px',
+                  padding: '1px',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}>
+                  <div style={{ height: '4px', background: '#f50', borderRadius: '2px', marginBottom: '1px' }}></div>
+                  <div style={{ height: '4px', background: '#2db7f5', borderRadius: '2px' }}></div>
+                </div>
+                <span>有标签文章</span>
+              </div>
+            </div>
+            <div style={{ marginTop: '6px', fontSize: '11px', color: '#999' }}>
+              • 彩色条块表示文章标签，不同颜色代表不同标签<br/>
+              • 点击标记查看文章详情和完整标签信息
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* 地图容器 - 始终渲染 */}
       <div 
         ref={mapContainerRef} 
         style={{ 
           width: '100%', 
-          height: 'calc(100vh - 250px)', 
+          height: 'calc(100vh - 350px)', 
           minHeight: '400px',
           borderRadius: '8px',
           border: '1px solid #d9d9d9',

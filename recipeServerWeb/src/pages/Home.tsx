@@ -9,6 +9,7 @@ import { fetchPosts } from '../store/postsSlice';
 import { logout, getCurrentUser, UserProfile } from '../services/authService';
 import { getCategories, getMyPosts, PostListResponse, Category, deletePost } from '../services/postService';
 import PostsMap from '../components/PostsMap';
+import DeleteConfirmModal from '../components/DeleteConfirmModal';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -52,6 +53,11 @@ const Home: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
+  
+  // 删除确认模态框状态
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ slug: string; title: string } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     const loadUserProfile = async () => {
@@ -134,77 +140,90 @@ const Home: React.FC = () => {
   const handleCreatePost = () => navigate('/create-post');
   const handleEditPost = (id: number) => navigate(`/edit-post/${id}`);
 
-  const handleDeletePost = async (slug: string, title: string) => {
-    Modal.confirm({
-      title: `确定要删除文章 "${title}" 吗？`,
-      content: '此操作不可撤销，但您仍然可以在历史记录中查看该文章的过往版本。',
-      okText: '确认删除',
-      okType: 'danger',
-      cancelText: '取消',
-      width: 500,
-      onOk: async () => {
-        try {
-          console.log(`开始删除文章: ${title} (slug: ${slug})`);
-          
-          // 显示删除进度
-          const hideLoading = message.loading(`正在删除文章 "${title}"...`, 0);
-          
-          await deletePost(slug);
-          
-          hideLoading();
-          console.log(`文章删除成功: ${title}`);
-          message.success(`文章 "${title}" 已被删除`);
-          
-          // 立即刷新我的文章列表
-          await fetchMyPosts();
-          
-          // 如果当前在全部文章页面，也刷新全部文章
-          if (selectedKey === 'posts') {
-            dispatch(fetchPosts(selectedCategory));
-          }
-          
-        } catch (error: any) {
-          console.error('删除文章失败:', error);
-          
-          // 详细的错误处理
-          let errorMessage = '删除文章失败';
-          
-          if (error.response) {
-            const status = error.response.status;
-            const data = error.response.data;
-            
-            if (status === 401) {
-              errorMessage = '认证失败，请重新登录';
-            } else if (status === 403) {
-              errorMessage = '权限不足，您只能删除自己的文章';
-            } else if (status === 404) {
-              errorMessage = '文章不存在，可能已被删除';
-            } else if (status >= 500) {
-              errorMessage = '服务器错误，请稍后重试';
-            } else {
-              errorMessage = data?.detail || data?.error || `删除失败 (状态码: ${status})`;
-            }
-          } else if (error.request) {
-            errorMessage = '网络连接失败，请检查网络连接';
-          } else {
-            errorMessage = error.message || '未知错误';
-          }
-          
-          message.error(errorMessage);
-          
-          // 显示详细错误信息（开发环境）
-          if (import.meta.env.DEV) {
-            console.error('删除错误详情:', {
-              slug,
-              title,
-              error: error.response?.data,
-              status: error.response?.status,
-              message: error.message
-            });
-          }
+  const handleDeletePost = (slug: string, title: string) => {
+    console.log('handleDeletePost called with:', { slug, title });
+    setDeleteTarget({ slug, title });
+    setDeleteModalVisible(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    
+    const { slug, title } = deleteTarget;
+    setDeleteLoading(true);
+    
+    try {
+      console.log(`开始删除文章: ${title} (slug: ${slug})`);
+      
+      // 显示删除进度
+      const hideLoading = message.loading(`正在删除文章 "${title}"...`, 0);
+      
+      await deletePost(slug);
+      
+      hideLoading();
+      console.log(`文章删除成功: ${title}`);
+      message.success(`文章 "${title}" 已被删除`);
+      
+      // 立即刷新我的文章列表
+      await fetchMyPosts();
+      
+      // 如果当前在全部文章页面，也刷新全部文章
+      if (selectedKey === 'posts') {
+        dispatch(fetchPosts(selectedCategory));
+      }
+      
+      // 关闭模态框
+      setDeleteModalVisible(false);
+      setDeleteTarget(null);
+      
+    } catch (error: any) {
+      console.error('删除文章失败:', error);
+      
+      // 详细的错误处理
+      let errorMessage = '删除文章失败';
+      
+      if (error.response) {
+        const status = error.response.status;
+        const data = error.response.data;
+        
+        if (status === 401) {
+          errorMessage = '认证失败，请重新登录';
+        } else if (status === 403) {
+          errorMessage = '权限不足，您只能删除自己的文章';
+        } else if (status === 404) {
+          errorMessage = '文章不存在，可能已被删除';
+        } else if (status >= 500) {
+          errorMessage = '服务器错误，请稍后重试';
+        } else {
+          errorMessage = data?.detail || data?.error || `删除失败 (状态码: ${status})`;
         }
-      },
-    });
+      } else if (error.request) {
+        errorMessage = '网络连接失败，请检查网络连接';
+      } else {
+        errorMessage = error.message || '未知错误';
+      }
+      
+      message.error(errorMessage);
+      
+      // 显示详细错误信息（开发环境）
+      if (import.meta.env.DEV) {
+        console.error('删除错误详情:', {
+          slug,
+          title,
+          error: error.response?.data,
+          status: error.response?.status,
+          message: error.message
+        });
+      }
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    console.log('用户取消删除操作');
+    setDeleteModalVisible(false);
+    setDeleteTarget(null);
   };
 
   const handleViewHistory = (slug: string) => {
@@ -377,6 +396,16 @@ const Home: React.FC = () => {
           </Card>
         </Col>
       </Row>
+
+      {/* 删除确认模态框 */}
+      <DeleteConfirmModal
+        visible={deleteModalVisible}
+        title="确认删除文章"
+        itemName={deleteTarget?.title || ''}
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+        loading={deleteLoading}
+      />
     </div>
   );
 };

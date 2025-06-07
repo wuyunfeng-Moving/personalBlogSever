@@ -1,14 +1,179 @@
-# 个人博客系统开发项目
+# 个人博客系统
 
 ## 项目概述
-基于 React + TypeScript (前端) 和 Django (后端) 的个人博客系统。
+一个完整的个人博客系统，包含Django后端和React前端，支持文章创建、编辑、分类管理、地理位置标记和地图展示功能。
 
-### 技术栈
-- **前端**: React 18 + TypeScript + Vite
-- **后端**: Django + Django REST Framework
-- **数据库**: SQLite (开发环境)
-- **认证**: JWT Token
-- **样式**: CSS Modules
+## 最新功能更新
+
+### 🗺️ 地理位置选择器改进 (最新)
+**需求**: 文章编辑中的地图没有展示出来，将地图作为一个组件，通过"添加地址"来打开。
+
+**实现内容**:
+1. **新建LocationSelector组件** (`src/components/LocationSelector.tsx`)
+   - 模态框设计：地图通过点击"添加地址"按钮在模态框中打开
+   - 用户友好界面：
+     - 未选择位置时显示虚线按钮"点击添加地理位置"
+     - 已选择位置时显示位置信息卡片，包含修改和移除功能
+   - 强大的地图功能：
+     - 地图点击选择位置
+     - 可拖拽标记精确调整位置
+     - 搜索功能，支持地点名称搜索
+     - 自动地理编码获取地址名称
+
+2. **更新CreatePost页面**
+   - 替换原有的LocationPicker为新的LocationSelector
+   - 保持数据格式完全兼容
+
+3. **测试页面**
+   - 创建LocationTest页面 (`/location-test`) 用于独立测试
+   - 创建ModalTest页面 (`/modal-test`) 用于Modal功能测试
+
+**技术特点**:
+- 响应式设计，模态框适配不同屏幕尺寸  
+- 完善的错误处理和加载状态
+- 地图实例按需创建和销毁，性能优化
+- 完整的TypeScript类型定义
+
+### 🐛 删除功能调试 (进行中)
+**问题**: 点击删除按钮后，modal没有执行
+
+**调试措施**:
+1. 添加详细的控制台日志输出
+2. 检查Modal对象和Modal.confirm函数的可用性
+3. 增强错误处理和用户反馈
+4. 创建ModalTest测试页面验证Modal.confirm功能
+
+**当前状态**: 正在调试中，已添加更多日志和错误检查
+
+## 核心功能
+
+### 后端功能 (Django)
+- **用户认证系统**: 注册、登录、JWT Token认证
+- **文章管理**: 
+  - CRUD操作 (创建、读取、更新、删除)
+  - 文章状态管理 (草稿、待审核、已发布、已拒绝)
+  - 地理位置信息存储 (经纬度、位置名称)
+- **分类和标签系统**: 灵活的内容组织
+- **文章历史记录**: 版本控制和变更追踪
+- **地理位置API**: 支持地理位置查询和存储
+
+### 前端功能 (React + TypeScript)
+- **响应式界面**: 基于Ant Design的现代UI
+- **文章管理**: 
+  - 富文本编辑器
+  - 实时预览
+  - 图片上传
+  - 地理位置选择
+- **地图展示**: 
+  - 基于高德地图的文章地理位置展示
+  - 文章标签的可视化展示
+  - 交互式地图标记
+- **用户体验**: 
+  - 加载状态管理
+  - 错误处理
+  - 用户反馈
+
+## 技术栈
+
+### 后端
+- **框架**: Django 4.2+ 
+- **数据库**: PostgreSQL (生产) / SQLite (开发)
+- **认证**: Django REST Framework + JWT
+- **API**: Django REST Framework
+- **历史记录**: django-simple-history
+
+### 前端  
+- **框架**: React 19 + TypeScript
+- **状态管理**: Redux Toolkit
+- **UI组件**: Ant Design 5.24+
+- **路由**: React Router 7+
+- **地图**: 高德地图API (@amap/amap-jsapi-loader)
+- **HTTP客户端**: Axios
+
+### 开发工具
+- **构建工具**: Vite
+- **代码检查**: ESLint + TypeScript ESLint
+- **包管理**: npm
+
+## 项目结构
+
+```
+personalBlogSever/
+├── recipeServerPython/          # Django后端
+│   ├── blog/                    # 博客应用
+│   ├── users/                   # 用户应用  
+│   ├── config/                  # 项目配置
+│   └── manage.py
+└── recipeServerWeb/             # React前端
+    ├── src/
+    │   ├── components/          # 可复用组件
+    │   │   ├── LocationSelector.tsx    # 地理位置选择器(新)
+    │   │   ├── LocationPicker.tsx      # 原地理位置选择器
+    │   │   └── PostsMap.tsx            # 地图展示组件
+    │   ├── pages/               # 页面组件
+    │   │   ├── CreatePost.tsx          # 文章创建/编辑
+    │   │   ├── Home.tsx               # 首页
+    │   │   ├── LocationTest.tsx       # 地理位置测试页面
+    │   │   └── ModalTest.tsx          # Modal测试页面
+    │   ├── services/            # API服务
+    │   └── store/               # Redux状态管理
+    └── package.json
+```
+
+## 部署说明
+
+### Docker部署 (推荐)
+项目包含完整的Docker配置文件，支持一键部署：
+- `docker-compose.yml`: 完整的服务编排
+- `Dockerfile.backend`: Django后端镜像
+- `Dockerfile.frontend`: React前端镜像
+- Nginx反向代理配置
+- PostgreSQL和Redis服务
+
+### 手动部署
+详细的手动部署说明请参考项目文档。
+
+## 开发指南
+
+### 开发流程规范
+每次开发新功能或修改将遵循以下流程：
+1. 项目说明更新 - 修改project.md，新增需求描述
+2. 接口文档更新 - 更新api_docs.md，添加新接口或修改现有接口  
+3. 测试用例更新 - 更新test_cases.md，添加新测试场景
+4. 测试代码更新 - 编写相应的测试函数
+5. 功能代码修改 - 实现或修改功能
+6. 测试验证 - 运行测试确保所有代码正常工作
+
+### 环境要求
+- **后端**: Python 3.8+, Django 4.2+
+- **前端**: Node.js 16+, npm 8+
+- **数据库**: PostgreSQL 12+ (生产环境)
+
+### 启动开发环境
+
+1. **启动后端**:
+```bash
+cd recipeServerPython
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver
+```
+
+2. **启动前端**:
+```bash
+cd recipeServerWeb  
+npm install
+npm start
+```
+
+## 测试页面
+- `/location-test`: 地理位置选择器功能测试
+- `/modal-test`: Modal.confirm功能测试
+
+## 当前开发状态
+- ✅ 地理位置选择器改进完成
+- 🔄 删除功能Modal问题调试中
+- 📋 下一步: 完善错误处理和用户体验
 
 ## 项目结构
 ```

@@ -8,6 +8,8 @@ import CreatePost from './pages/CreatePost';
 import { getCurrentUser, UserProfile } from './services/authService';
 import PostDetail from './pages/PostDetail';
 import PendingReviews from './pages/PendingReviews';
+import LocationTest from './pages/LocationTest';
+import ModalTest from './pages/ModalTest';
 
 const { Header, Content } = Layout;
 
@@ -162,6 +164,8 @@ const App: React.FC = () => {
                 </AdminRoute>
               } 
             />
+            <Route path="/location-test" element={<LocationTest />} />
+            <Route path="/modal-test" element={<ModalTest />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Content>

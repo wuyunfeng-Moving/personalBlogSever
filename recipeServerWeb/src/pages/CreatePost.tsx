@@ -11,7 +11,7 @@ import { getCurrentUser, UserProfile } from '../services/authService';
 import { createPost, updatePost, getPostById, getCategories } from '../services/postService';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { Category, BlogPost } from '../services/api';
-import LocationPicker from '../components/LocationPicker';
+import LocationSelector from '../components/LocationSelector';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -440,7 +440,7 @@ const CreatePost: React.FC = () => {
             name="location"
             label="地理位置"
           >
-            <LocationPicker />
+            <LocationSelector placeholder="点击添加文章地理位置" />
           </Form.Item>
 
           <Form.Item
